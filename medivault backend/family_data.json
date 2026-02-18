@@ -1,0 +1,41 @@
+[
+  {
+    "id": "1",
+    "name": "Tanishka",
+    "relation": "You",
+    "age": 25,
+    "gender": "Female",
+    "color": "blue",
+    "initials": "T",
+    "active": false,
+    "medications": 3,
+    "symptoms": 3,
+    "documents": 5
+  },
+  {
+    "id": "j5qvfl2p2",
+    "name": "Shruti",
+    "relation": "Sister",
+    "age": 21,
+    "gender": "Female",
+    "color": "pink",
+    "initials": "Sh",
+    "active": false,
+    "medications": 0,
+    "symptoms": 0,
+    "documents": 0
+  },
+  {
+    "id": "ijb3bmtu2",
+    "name": "trisha",
+    "relation": "Sister",
+    "age": 21,
+    "gender": "Female",
+    "color": "pink",
+    "initials": "tr",
+    "active": true,
+    "medications": 0,
+    "symptoms": 0,
+    "documents": 0
+  }
+]

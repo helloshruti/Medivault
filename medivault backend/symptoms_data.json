@@ -1,0 +1,42 @@
+[
+  {
+    "id": "cztz5a56a",
+    "profileId": "1",
+    "type": "Other",
+    "description": "stomach ache",
+    "severity": 2,
+    "duration": "Few hours",
+    "notes": "",
+    "date": "2026-01-24T03:42:18.050Z"
+  },
+  {
+    "id": "d0qh362ou",
+    "profileId": "1",
+    "type": "Other",
+    "description": "diziness",
+    "severity": 8,
+    "duration": "Few days",
+    "notes": "",
+    "date": "2026-01-24T03:41:34.433Z"
+  },
+  {
+    "id": "b62sx93w9",
+    "profileId": "1",
+    "type": "Fatigue",
+    "description": "",
+    "severity": 9,
+    "duration": "Few hours",
+    "notes": "",
+    "date": "2026-01-23T18:20:01.785Z"
+  },
+  {
+    "id": "12cpriqx0",
+    "profileId": "3",
+    "type": "Nausea",
+    "description": "",
+    "severity": 3,
+    "duration": "Less than 1 hour",
+    "notes": "",
+    "date": "2026-01-23T16:27:22.745Z"
+  }
+]
