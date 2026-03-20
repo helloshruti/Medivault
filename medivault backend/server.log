@@ -1,0 +1,93 @@
+INFO:     Will watch for changes in these directories: ['/mnt/d/PROJ_MV/Medivault/medivault backend']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [8955] using StatReload
+/mnt/d/PROJ_MV/Medivault/medivault backend/main.py:17: FutureWarning: 
+
+All support for the `google.generativeai` package has ended. It will no longer be receiving 
+updates or bug fixes. Please switch to the `google.genai` package as soon as possible.
+See README for more details:
+
+https://github.com/google-gemini/deprecated-generative-ai-python/blob/main/README.md
+
+  import google.generativeai as genai
+INFO:     Started server process [8957]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+[AI] Gemini configured for prescription scanning
+INFO:     127.0.0.1:59878 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35814 - "GET /family HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35842 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35814 - "GET /family HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35842 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35830 - "GET /symptoms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35830 - "GET /symptoms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35858 - "GET /documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35858 - "GET /documents/stats/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35858 - "GET /documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35858 - "GET /documents/stats/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43320 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43320 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43320 - "GET /family HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43326 - "GET /symptoms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43326 - "GET /symptoms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43320 - "GET /family HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43326 - "GET /family HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43326 - "GET /family HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43326 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43326 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39838 - "POST /scan-prescription HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39836 - "POST /upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53980 - "GET /documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53982 - "GET /documents/stats/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53982 - "GET /documents/stats/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53980 - "GET /documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53986 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53986 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50194 - "GET /family HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50196 - "GET /symptoms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50218 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50196 - "GET /symptoms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50194 - "GET /family HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50218 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38878 - "GET /symptoms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38880 - "GET /family HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38910 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33892 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33864 - "GET /family HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33878 - "GET /symptoms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41820 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41820 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41830 - "POST /upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38212 - "POST /scan-prescription HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37676 - "GET /documents/stats/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37668 - "GET /documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37676 - "GET /documents/stats/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37668 - "GET /documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37178 - "GET /documents/3a28377f8d1b/view HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37686 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37686 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37186 - "GET /security/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39256 - "GET /security/verify/3a28377f8d1b HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39258 - "GET /security/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51668 - "POST /upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51670 - "POST /scan-prescription HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55692 - "GET /symptoms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55690 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55708 - "GET /family HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55692 - "GET /symptoms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55690 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55708 - "GET /family HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55690 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55690 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55718 - "GET /documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55718 - "GET /documents/stats/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55718 - "GET /documents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55718 - "GET /documents/stats/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55718 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55718 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33728 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33724 - "GET /symptoms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33726 - "GET /family HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33728 - "GET /medications HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33724 - "GET /symptoms HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33726 - "GET /family HTTP/1.1" 200 OK
