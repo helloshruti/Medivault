@@ -1,9 +1,14 @@
+<<<<<<< HEAD
 import { Heart, Bell, ChevronRight, Pill, Activity, FileText, Calendar, Droplet, Brain, Plus } from 'lucide-react';
+=======
+import { Heart, Bell, ChevronRight, Pill, Activity, FileText, Calendar } from 'lucide-react';
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+<<<<<<< HEAD
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -14,13 +19,22 @@ import { LogOut } from 'lucide-react';
 interface DashboardProps {
   onNavigate: (page: string) => void;
   familyRefreshToken: number;
+=======
+import { useState, useEffect } from 'react';
+
+interface DashboardProps {
+  onNavigate: (page: string) => void;
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
 }
 
 interface Profile {
   id: string;
   name: string;
   relation: string;
+<<<<<<< HEAD
   active: boolean;
+=======
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
 }
 
 interface Symptom {
@@ -44,12 +58,17 @@ interface Medication {
   takenToday: boolean;
 }
 
+<<<<<<< HEAD
 export function Dashboard({ onNavigate, familyRefreshToken }: DashboardProps) {
   const { user, logout } = useAuth();
+=======
+export function Dashboard({ onNavigate }: DashboardProps) {
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<string>('');
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
+<<<<<<< HEAD
   const [showAllVitals, setShowAllVitals] = useState(false);
   const [vitalsData, setVitalsData] = useState({
     bloodPressure: '120/80 mmHg',
@@ -59,12 +78,15 @@ export function Dashboard({ onNavigate, familyRefreshToken }: DashboardProps) {
     physicalActivity: '45 mins/day',
     mentalHealth: '4/5'
   });
+=======
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
 
   // Load data
   useEffect(() => {
     // Profiles
     fetch('http://localhost:8000/family')
       .then(res => res.json())
+<<<<<<< HEAD
       .then((data: Profile[]) => {
         setProfiles(data);
         const activeProfile = data.find((p) => p.active);
@@ -73,6 +95,11 @@ export function Dashboard({ onNavigate, familyRefreshToken }: DashboardProps) {
         } else if (data.length > 0) {
           setSelectedProfile(data[0].id);
         }
+=======
+      .then(data => {
+        setProfiles(data);
+        if (data.length > 0) setSelectedProfile(data[0].id);
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
       })
       .catch(err => console.error(err));
 
@@ -87,7 +114,11 @@ export function Dashboard({ onNavigate, familyRefreshToken }: DashboardProps) {
       .then(res => res.json())
       .then(data => setMedications(data))
       .catch(err => console.error(err));
+<<<<<<< HEAD
   }, [familyRefreshToken]);
+=======
+  }, []);
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
 
   const currentProfile = profiles.find(p => p.id === selectedProfile);
   const profileSymptoms = symptoms.filter(s => s.profileId === selectedProfile).slice(0, 3);
@@ -96,6 +127,7 @@ export function Dashboard({ onNavigate, familyRefreshToken }: DashboardProps) {
   // Mock vitals for demo (since we don't have a backend for this yet)
   const getVitals = () => {
     return [
+<<<<<<< HEAD
       { id: 'bloodPressure', name: 'Blood Pressure', value: vitalsData.bloodPressure, icon: Heart, color: 'red' },
       { id: 'heartRate', name: 'Heart Rate', value: vitalsData.heartRate, icon: Activity, color: 'blue' },
       { id: 'temperature', name: 'Temperature', value: vitalsData.temperature, icon: Activity, color: 'orange' },
@@ -106,6 +138,15 @@ export function Dashboard({ onNavigate, familyRefreshToken }: DashboardProps) {
   };
 
   const vitals = showAllVitals ? getVitals() : getVitals().slice(0, 3);
+=======
+      { name: 'Blood Pressure', value: '120/80 mmHg', icon: Heart, color: 'red' },
+      { name: 'Heart Rate', value: '72 bpm', icon: Activity, color: 'blue' },
+      { name: 'Temperature', value: '98.6°F', icon: Activity, color: 'orange' },
+    ];
+  };
+
+  const vitals = getVitals();
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
 
   const getSeverityColor = (sev: number) => {
     if (sev <= 3) return 'green';
@@ -125,6 +166,7 @@ export function Dashboard({ onNavigate, familyRefreshToken }: DashboardProps) {
               </div>
               <div className="text-blue-600">MediVault AI</div>
             </div>
+<<<<<<< HEAD
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon">
                 <Bell className="w-5 h-5" />
@@ -133,6 +175,11 @@ export function Dashboard({ onNavigate, familyRefreshToken }: DashboardProps) {
                 <LogOut className="w-5 h-5" />
               </Button>
             </div>
+=======
+            <Button variant="ghost" size="icon">
+              <Bell className="w-5 h-5" />
+            </Button>
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
           </div>
 
           {/* Profile Selector */}
@@ -150,11 +197,14 @@ export function Dashboard({ onNavigate, familyRefreshToken }: DashboardProps) {
           </Select>
         </div>
 
+<<<<<<< HEAD
         <div className="px-4 pt-4 pb-0">
           <h1 className="text-xl font-semibold">Welcome back, {user?.name || 'User'}!</h1>
           <p className="text-gray-500 text-sm">Here's your health summary for today.</p>
         </div>
 
+=======
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
         <div className="p-4 space-y-4">
           {/* Today's Notifications */}
           <Card className="p-4 bg-blue-50 border-blue-200">
@@ -201,6 +251,7 @@ export function Dashboard({ onNavigate, familyRefreshToken }: DashboardProps) {
           {/* Latest Vitals */}
           <Card className="p-4">
             <div className="flex items-center justify-between mb-4">
+<<<<<<< HEAD
               <div className="font-medium">Latest Vitals</div>
               <div className="flex gap-2">
                 <Dialog>
@@ -234,6 +285,10 @@ export function Dashboard({ onNavigate, familyRefreshToken }: DashboardProps) {
                   {showAllVitals ? 'View Less' : 'View All'}
                 </Button>
               </div>
+=======
+              <div>Latest Vitals</div>
+              <Button variant="ghost" size="sm">View All</Button>
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
             </div>
             <div className="space-y-3">
               {vitals.map((vital, index) => (
@@ -326,4 +381,8 @@ export function Dashboard({ onNavigate, familyRefreshToken }: DashboardProps) {
       </div>
     </div>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab

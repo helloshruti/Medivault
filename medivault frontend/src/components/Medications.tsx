@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { Pill, Plus, Clock, Edit, Trash2, CheckCircle2, Circle, Upload } from 'lucide-react';
+=======
+import { Pill, Plus, Clock, Edit, Trash2, CheckCircle2, Circle, Upload, FileCheck, Loader2 } from 'lucide-react';
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
@@ -28,6 +32,11 @@ export function Medications({ onNavigate }: MedicationsProps) {
   const [frequency, setFrequency] = useState('');
   const [timeOfDay, setTimeOfDay] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+<<<<<<< HEAD
+=======
+  const [prescriptionUploading, setPrescriptionUploading] = useState(false);
+  const [prescriptionStatus, setPrescriptionStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
 
   // Load meds
   useEffect(() => {
@@ -205,6 +214,7 @@ export function Medications({ onNavigate }: MedicationsProps) {
                       <div className="pt-2">
                         <Input
                           type="file"
+<<<<<<< HEAD
                           accept="image/*"
                           className="hidden"
                           id="prescription-upload"
@@ -220,6 +230,51 @@ export function Medications({ onNavigate }: MedicationsProps) {
                                 .then(res => res.json())
                                 .then(data => alert('Prescription uploaded successfully!'))
                                 .catch(err => console.error(err));
+=======
+                          accept="image/*,.pdf"
+                          className="hidden"
+                          id="prescription-upload"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+
+                            setPrescriptionUploading(true);
+                            setPrescriptionStatus(null);
+
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            formData.append('doc_type', 'prescription');
+                            formData.append('profile', 'self');
+
+                            try {
+                              const res = await fetch('http://localhost:8000/upload', {
+                                method: 'POST',
+                                body: formData,
+                              });
+                              const data = await res.json();
+
+                              if (data.success) {
+                                setPrescriptionStatus({
+                                  type: 'success',
+                                  message: `Prescription uploaded successfully.`
+                                });
+                              } else {
+                                setPrescriptionStatus({
+                                  type: 'error',
+                                  message: data.error || 'Upload failed. Please try again.'
+                                });
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              setPrescriptionStatus({
+                                type: 'error',
+                                message: 'Network error. Is the backend running?'
+                              });
+                            } finally {
+                              setPrescriptionUploading(false);
+                              // Reset file input so same file can be re-selected
+                              e.target.value = '';
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
                             }
                           }}
                         />
@@ -227,10 +282,50 @@ export function Medications({ onNavigate }: MedicationsProps) {
                           variant="outline"
                           className="w-full border-dashed"
                           onClick={() => document.getElementById('prescription-upload')?.click()}
+<<<<<<< HEAD
                         >
                           <Upload className="w-4 h-4 mr-2" />
                           Upload Prescription Image
                         </Button>
+=======
+                          disabled={prescriptionUploading}
+                        >
+                          {prescriptionUploading ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-4 h-4 mr-2" />
+                              Upload Prescription Image
+                            </>
+                          )}
+                        </Button>
+
+                        {prescriptionStatus && (
+                          <div className={`mt-3 p-3 rounded-lg text-sm flex items-start gap-2 ${
+                            prescriptionStatus.type === 'success'
+                              ? 'bg-green-50 text-green-700 border border-green-200'
+                              : 'bg-red-50 text-red-700 border border-red-200'
+                          }`}>
+                            {prescriptionStatus.type === 'success' && (
+                              <FileCheck className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                            )}
+                            <div>
+                              <div>{prescriptionStatus.message}</div>
+                              {prescriptionStatus.type === 'success' && (
+                                <button
+                                  className="text-blue-600 underline text-xs mt-1"
+                                  onClick={() => onNavigate('documents')}
+                                >
+                                  Go to Docs tab to view
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
                       </div>
                     </>
                   )}
@@ -297,6 +392,10 @@ export function Medications({ onNavigate }: MedicationsProps) {
                   ))}
                 </div>
               </Card>
+<<<<<<< HEAD
+=======
+
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
             </TabsContent>
 
             <TabsContent value="archive" className="mt-4">

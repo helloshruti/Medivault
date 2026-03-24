@@ -1,11 +1,29 @@
 [
   {
     "id": "bfj9krc12",
+<<<<<<< HEAD
     "name": "asdfh",
     "dosage": "20",
     "frequency": "twice",
     "timeOfDay": "noon",
     "active": true,
     "takenToday": false
+=======
+    "name": "Insulin",
+    "dosage": "200mg",
+    "frequency": "once",
+    "timeOfDay": "noon",
+    "active": true,
+    "takenToday": false
+  },
+  {
+    "id": "ukh34q14k",
+    "name": "Metformin",
+    "dosage": "500mg",
+    "frequency": "twice",
+    "timeOfDay": "afternoon",
+    "active": true,
+    "takenToday": false
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
   }
 ]

@@ -15,6 +15,7 @@ export default defineConfig({
       { find: /(next-themes)@\d+\.\d+\.\d+/, replacement: "$1" },
     ],
   },
+<<<<<<< HEAD
   server: {
     proxy: {
       "/api": {
@@ -25,3 +26,7 @@ export default defineConfig({
     },
   },
 });
+=======
+}); 
+
+>>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
