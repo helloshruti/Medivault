@@ -5,13 +5,12 @@ import { Medications } from './components/Medications';
 import { Symptoms } from './components/Symptoms';
 import { FamilyProfiles } from './components/FamilyProfiles';
 import { MobileNav } from './components/MobileNav';
-import Auth from './components/auth';
-
-interface User { id: string; name: string; email: string; }
+import { Auth } from './components/Auth';
+import { useAuth } from './context/AuthContext';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
 
   const renderPage = () => {
     switch (currentPage) {
@@ -25,7 +24,7 @@ export default function App() {
   };
 
   if (!user) {
-    return <Auth onLogin={setUser} />;
+    return <Auth onAuthenticated={() => {}} />;
   }
 
   const displayName = user.name.split(' ').filter((part) => !/^\d+$/.test(part)).join(' ');
