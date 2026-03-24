@@ -1,15 +1,3 @@
-<<<<<<< HEAD
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-import os
-import shutil
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-=======
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, HTMLResponse
@@ -57,7 +45,6 @@ origins = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
->>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,15 +54,6 @@ app.add_middleware(
 UPLOAD_DIR = "new docs uploaded"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-<<<<<<< HEAD
-import json
-from typing import List, Optional
-from uuid import uuid4
-from pydantic import BaseModel
-from passlib.context import CryptContext
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-=======
 
 # ─── SQLite Security Database ────────────────────────────────────────────────
 
@@ -712,7 +690,6 @@ def verify_document_integrity(doc_id: str):
 # ─── Family Data ─────────────────────────────────────────────────────────────
 
 DATA_FILE = "family_data.json"
->>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
 
 class FamilyMember(BaseModel):
     id: str
@@ -727,46 +704,6 @@ class FamilyMember(BaseModel):
     symptoms: int
     documents: int
 
-<<<<<<< HEAD
-# User authentication
-
-class User(BaseModel):
-    id: str
-    email: str
-    name: str
-    hashed_password: str
-
-USERS_FILE = "users_data.json"
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-def load_users() -> List[User]:
-    if os.path.exists(USERS_FILE):
-        with open(USERS_FILE, "r") as f:
-            data = json.load(f)
-            return [User(**item) for item in data]
-    return []
-
-def save_users(users: List[User]) -> None:
-    with open(USERS_FILE, "w") as f:
-        json.dump([user.dict() for user in users], f, indent=2)
-
-def get_user_by_email(email: str) -> Optional[User]:
-    users = load_users()
-    for user in users:
-        if user.email.lower() == email.lower():
-            return user
-    return None
-
-# Data storage
-DATA_FILE = "family_data.json"
-
-=======
->>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as f:
@@ -817,54 +754,6 @@ def save_data(data):
     with open(DATA_FILE, "w") as f:
         json.dump([m.dict() for m in data], f, indent=2)
 
-<<<<<<< HEAD
-@app.post("/signup")
-def signup(payload: dict):
-    email = payload.get("email")
-    name = payload.get("name")
-    password = payload.get("password")
-
-    if not email or not password or not name:
-        raise HTTPException(status_code=400, detail="Missing required fields")
-
-    existing = get_user_by_email(email)
-    if existing:
-        raise HTTPException(status_code=400, detail="User already exists")
-
-    user = User(
-        id=str(uuid4()),
-        email=email,
-        name=name,
-        hashed_password=get_password_hash(password),
-    )
-    users = load_users()
-    users.append(user)
-    save_users(users)
-    return {"id": user.id, "email": user.email, "name": user.name}
-
-@app.post("/login")
-def login(payload: dict):
-    email = payload.get("email")
-    password = payload.get("password")
-
-    if not email or not password:
-        raise HTTPException(status_code=400, detail="Missing credentials")
-
-    user = get_user_by_email(email)
-    if not user or not verify_password(password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-
-    return {"id": user.id, "email": user.email, "name": user.name}
-
-@app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    file_location = os.path.join(UPLOAD_DIR, file.filename)
-    with open(file_location, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    return {"filename": file.filename, "location": file_location, "message": "File uploaded successfully"}
-
-=======
->>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
 @app.get("/family", response_model=List[FamilyMember])
 def get_family():
     return load_data()
@@ -874,12 +763,8 @@ def update_family(members: List[FamilyMember]):
     save_data(members)
     return {"message": "Family data updated"}
 
-<<<<<<< HEAD
-# Medication Data Sorage
-=======
 # ─── Medication Data Storage ─────────────────────────────────────────────────
 
->>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
 MEDS_FILE = "medications_data.json"
 
 class Medication(BaseModel):
@@ -929,12 +814,8 @@ def update_medications(meds: List[Medication]):
     save_meds(meds)
     return {"message": "Medications updated"}
 
-<<<<<<< HEAD
-# Symptom Data Storage
-=======
 # ─── Symptom Data Storage ────────────────────────────────────────────────────
 
->>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
 SYMPTOMS_FILE = "symptoms_data.json"
 
 class Symptom(BaseModel):
