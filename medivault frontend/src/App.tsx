@@ -24,7 +24,11 @@ export default function App() {
   };
 
   if (!user) {
-    return <Auth onAuthenticated={() => {}} />;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
+        <Auth onAuthenticated={() => {}} />
+      </div>
+    );
   }
 
   const displayName = user.name.split(' ').filter((part) => !/^\d+$/.test(part)).join(' ');
