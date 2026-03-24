@@ -15,18 +15,5 @@ export default defineConfig({
       { find: /(next-themes)@\d+\.\d+\.\d+/, replacement: "$1" },
     ],
   },
-<<<<<<< HEAD
-  server: {
-    proxy: {
-      "/api": {
-        target: "http://localhost:8000",
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
-      },
-    },
-  },
-});
-=======
 }); 
 
->>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
