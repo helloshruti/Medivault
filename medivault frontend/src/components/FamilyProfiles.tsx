@@ -11,10 +11,6 @@ import { Label } from './ui/label';
 
 interface FamilyProfilesProps {
   onNavigate: (page: string) => void;
-<<<<<<< HEAD
-  onFamilyChanged?: () => void;
-=======
->>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
 }
 
 interface FamilyMember {
@@ -73,11 +69,7 @@ const INITIAL_MEMBERS: FamilyMember[] = [
   },
 ];
 
-<<<<<<< HEAD
-export function FamilyProfiles({ onNavigate, onFamilyChanged }: FamilyProfilesProps) {
-=======
 export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
->>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
@@ -96,17 +88,7 @@ export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newMembers),
-<<<<<<< HEAD
-    })
-      .then(() => {
-        if (onFamilyChanged) {
-          onFamilyChanged();
-        }
-      })
-      .catch(err => console.error("Failed to save family members:", err));
-=======
     }).catch(err => console.error("Failed to save family members:", err));
->>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
   };
 
   // Form State
