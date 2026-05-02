@@ -9,3 +9,4 @@ google-generativeai
 Pillow
 pdfplumber
 pytesseract
+pdf2image

@@ -17,6 +17,20 @@ import base64
 
 # ─── OCR / Document Classification ──────────────────────────────────────────
 
+_TESS_CMD = "/opt/homebrew/bin/tesseract"  # Homebrew path on Apple Silicon / Intel Mac
+
+
+def _run_tesseract(img) -> str:
+    """Run pytesseract with the explicit Homebrew binary path."""
+    try:
+        import pytesseract
+        pytesseract.pytesseract.tesseract_cmd = _TESS_CMD
+        return pytesseract.image_to_string(img)
+    except Exception as e:
+        print(f"[OCR] pytesseract error: {e}")
+        return ""
+
+
 def _extract_text(file_path: str) -> str:
     """Extract text from a PDF or image file. Returns lowercase string."""
     ext = os.path.splitext(file_path)[1].lower()
@@ -33,15 +47,23 @@ def _extract_text(file_path: str) -> str:
         except Exception as e:
             print(f"[OCR] pdfplumber error: {e}")
 
-    if ext in (".jpg", ".jpeg", ".png"):
-        try:
-            import pytesseract
-            from PIL import Image
-            img = Image.open(file_path)
-            text = pytesseract.image_to_string(img)
-        except Exception as e:
-            print(f"[OCR] pytesseract error: {e}")
+        # If pdfplumber got nothing (scanned PDF), try image-based OCR via pdf2image
+        if not text.strip():
+            try:
+                from pdf2image import convert_from_path
+                from PIL import Image
+                images = convert_from_path(file_path, first_page=1, last_page=3)
+                for img in images:
+                    text += _run_tesseract(img) + "\n"
+            except Exception as e:
+                print(f"[OCR] pdf2image fallback error: {e}")
 
+    if ext in (".jpg", ".jpeg", ".png"):
+        from PIL import Image
+        img = Image.open(file_path)
+        text = _run_tesseract(img)
+
+    print(f"[OCR] Extracted text snippet: {text[:200].strip()!r}")
     return text.lower()
 
 
