@@ -283,19 +283,23 @@ export function Documents({ onNavigate }: DocumentsProps) {
               {Object.entries(DOC_TYPE_CONFIG).map(([key, config]) => (
                 <Card
                   key={key}
-                  className={`p-4 cursor-pointer hover:shadow-md transition-shadow ${filterType === key ? 'ring-2 ring-blue-400' : ''}`}
+                  className={`p-3 cursor-pointer hover:shadow-md transition-shadow ${filterType === key ? 'ring-2 ring-blue-400' : ''}`}
                   onClick={() => setFilterType(filterType === key ? 'all' : key)}
                 >
-                  <div className={`w-10 h-10 ${config.bgColor.replace('50', '100')} rounded-lg flex items-center justify-center mb-2`}>
-                    {key === 'imaging' ? (
-                      <Image className={`w-5 h-5 ${config.color}`} />
-                    ) : (
-                      <FileText className={`w-5 h-5 ${config.color}`} />
-                    )}
-                  </div>
-                  <div className="text-sm mb-1">{config.label}</div>
-                  <div className="text-gray-500">
-                    {(stats as Record<string, number>)[key] || 0} {((stats as Record<string, number>)[key] || 0) === 1 ? 'file' : 'files'}
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 ${config.bgColor.replace('50', '100')} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                      {key === 'imaging' ? (
+                        <Image className={`w-4 h-4 ${config.color}`} />
+                      ) : (
+                        <FileText className={`w-4 h-4 ${config.color}`} />
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">{config.label}</div>
+                      <div className="text-xs text-gray-500">
+                        {(stats as Record<string, number>)[key] || 0} {((stats as Record<string, number>)[key] || 0) === 1 ? 'file' : 'files'}
+                      </div>
+                    </div>
                   </div>
                 </Card>
               ))}
