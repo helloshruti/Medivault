@@ -5,8 +5,9 @@ passlib[bcrypt]
 requests
 python-dotenv
 pycryptodome
-google-generativeai
+groq
 Pillow
 pdfplumber
 pytesseract
 pdf2image
+
