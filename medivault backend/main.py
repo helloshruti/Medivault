@@ -1214,18 +1214,26 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 def chat(req: ChatRequest):
-    try:
-        from groq import Groq
-        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": req.message},
-            ],
-            max_tokens=200,
-        )
-        reply = completion.choices[0].message.content.strip()
-        return {"reply": reply}
-    except Exception as e:
-        return {"reply": f"Something went wrong: {str(e)}"}
+    from groq import Groq
+    from fastapi.responses import StreamingResponse
+
+    def generate():
+        try:
+            client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+            stream = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": req.message},
+                ],
+                max_tokens=200,
+                stream=True,
+            )
+            for chunk in stream:
+                token = chunk.choices[0].delta.content or ""
+                if token:
+                    yield token
+        except Exception as e:
+            yield f"Something went wrong: {str(e)}"
+
+    return StreamingResponse(generate(), media_type="text/plain")

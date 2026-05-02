@@ -166,10 +166,23 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
       });
-      const data = await res.json();
-      setChatMessages(prev => [...prev, { role: 'assistant', text: data.reply }]);
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) throw new Error('No response body');
+      setChatMessages(prev => [...prev, { role: 'assistant', text: '' }]);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const token = decoder.decode(value, { stream: true });
+        setChatMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: 'assistant', text: updated[updated.length - 1].text + token };
+          return updated;
+        });
+        if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+      }
     } catch {
-      setChatMessages(prev => [...prev, { role: 'assistant', text: 'Could not reach the AI. Make sure Ollama is running.' }]);
+      setChatMessages(prev => [...prev, { role: 'assistant', text: 'Could not reach the AI.' }]);
     } finally {
       setChatLoading(false);
       setTimeout(() => { if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight; }, 50);
