@@ -1,4 +1,4 @@
-import { FileText, Upload, Search, Share2, Filter, Loader2, ExternalLink, Trash2, Image, FileCheck } from 'lucide-react';
+import { FileText, Upload, Search, Share2, Loader2, ExternalLink, Trash2, Image, FileCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
@@ -272,27 +272,6 @@ export function Documents({ onNavigate }: DocumentsProps) {
             )}
           </Card>
 
-          {/* Document Type Filter */}
-          <Card className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Filter className="w-5 h-5 text-gray-500" />
-              <div>Filter by Type</div>
-            </div>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select document type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Documents</SelectItem>
-                <SelectItem value="lab">Lab Reports</SelectItem>
-                <SelectItem value="prescription">Prescriptions</SelectItem>
-                <SelectItem value="imaging">Bills & Images</SelectItem>
-                <SelectItem value="discharge">Discharge Summary</SelectItem>
-                <SelectItem value="insurance">Insurance</SelectItem>
-                <SelectItem value="vaccination">Vaccination Cards</SelectItem>
-              </SelectContent>
-            </Select>
-          </Card>
 
           {/* Document Categories - Dynamic counts from backend */}
           <div>

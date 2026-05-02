@@ -78,6 +78,7 @@ export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
+  const [selfConflictPending, setSelfConflictPending] = useState(false);
 
   // Load members from backend on mount
   useEffect(() => {
@@ -136,17 +137,23 @@ export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
     setIsDialogOpen(true);
   };
 
-  const handleSave = () => {
+  const doSave = () => {
     let newMembers;
+    const isSelf = formData.relation === 'Self';
+    const existingSelf = members.find(
+      m => (m.relation === 'Self' || m.relation === 'You') && m.id !== editingMember?.id
+    );
+
     if (editingMember) {
-      // Edit existing
-      newMembers = members.map(m =>
-        m.id === editingMember.id
-          ? { ...m, ...formData, initials: formData.name?.substring(0, 2) || '??' } as FamilyMember
-          : m
-      );
+      newMembers = members.map(m => {
+        if (m.id === editingMember.id)
+          return { ...m, ...formData, initials: formData.name?.substring(0, 2) || '??' } as FamilyMember;
+        // Demote old Self if a new Self is being set
+        if (isSelf && existingSelf && m.id === existingSelf.id)
+          return { ...m, relation: 'Other' };
+        return m;
+      });
     } else {
-      // Add new
       const newMember: FamilyMember = {
         id: Math.random().toString(36).substr(2, 9),
         name: formData.name || 'New Member',
@@ -160,10 +167,29 @@ export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
         symptoms: 0,
         documents: 0,
       };
-      newMembers = [...members, newMember];
+      // Demote old Self
+      newMembers = [
+        ...members.map(m =>
+          isSelf && existingSelf && m.id === existingSelf.id ? { ...m, relation: 'Other' } : m
+        ),
+        newMember,
+      ];
     }
     saveToBackend(newMembers);
     setIsDialogOpen(false);
+    setSelfConflictPending(false);
+  };
+
+  const handleSave = () => {
+    const isSelf = formData.relation === 'Self';
+    const existingSelf = members.find(
+      m => (m.relation === 'Self' || m.relation === 'You') && m.id !== editingMember?.id
+    );
+    if (isSelf && existingSelf) {
+      setSelfConflictPending(true);
+      return;
+    }
+    doSave();
   };
 
   const handleDelete = (id: string) => {
@@ -302,6 +328,7 @@ export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
                     <SelectValue placeholder="Select relationship" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="Self">Self</SelectItem>
                     <SelectItem value="Father">Father</SelectItem>
                     <SelectItem value="Mother">Mother</SelectItem>
                     <SelectItem value="Brother">Brother</SelectItem>
@@ -361,6 +388,22 @@ export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleSave}>Save Member</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Self-conflict confirmation dialog */}
+        <Dialog open={selfConflictPending} onOpenChange={setSelfConflictPending}>
+          <DialogContent className="sm:max-w-[380px]">
+            <DialogHeader>
+              <DialogTitle>Change Self profile?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-gray-600">
+              Another profile is already marked as <strong>Self</strong>. Setting this profile as Self will change the existing one to <strong>Other</strong>. Do you want to continue?
+            </p>
+            <DialogFooter className="flex gap-2 mt-2">
+              <Button variant="outline" onClick={() => setSelfConflictPending(false)}>Cancel</Button>
+              <Button onClick={doSave}>Yes, continue</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
