@@ -218,7 +218,7 @@ def parse_medications_from_text(text: str, profile_id: str) -> list:
 # Load environment variables
 load_dotenv()
 
-PINATA_JWT = (os.getenv("PINATA_JWT") or "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI5NWQyMDRmOS1iMzlkLTRjNjYtOWE5Mi04ZjAzYWI1NGEzZjciLCJlbWFpbCI6IjIwMjIwNzAxMDI5QGthcm5hdmF0aXVuaXZlcnNpdHkuZWR1LmluIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsInBpbl9wb2xpY3kiOnsicmVnaW9ucyI6W3siZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiRlJBMSJ9LHsiZGVzaXJlZFJlcGxpY2F0aW9uQ291bnQiOjEsImlkIjoiTllDMSJ9XSwidmVyc2lvbiI6MX0sIm1mYV9lbmFibGVkIjpmYWxzZSwic3RhdHVzIjoiQUNUSVZFIn0sImF1dGhlbnRpY2F0aW9uVHlwZSI6InNjb3BlZEtleSIsInNjb3BlZEtleUtleSI6ImQ0NjM2NzU1MTIzZTM0M2RlYzEwIiwic2NvcGVkS2V5U2VjcmV0IjoiZDNiYWJlZDgyN2MzYWRmN2VkMmE0NWFmZGJiNGE1NWFkNDMyNWQ3MWQ5ZDc5Y2M3OGE4MWRjYTBhNGQwN2Q0NCIsImV4cCI6MTgwNTg4MDI1OH0.wFuQHLwrw5CBsVHAxF5pODYaIQN1SpP7W0zliMjoVRU").strip()
+PINATA_JWT = (os.getenv("PINATA_JWT") or "").strip()
 PINATA_GATEWAY_URL = os.getenv("PINATA_GATEWAY_URL", "https://gateway.pinata.cloud/ipfs")
 
 # AES-256 encryption key (32 bytes). Loaded from .env or auto-generated once.
