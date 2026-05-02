@@ -218,7 +218,7 @@ def parse_medications_from_text(text: str, profile_id: str) -> list:
 # Load environment variables
 load_dotenv()
 
-PINATA_JWT = os.getenv("PINATA_JWT")
+PINATA_JWT = (os.getenv("PINATA_JWT") or "").strip()
 PINATA_GATEWAY_URL = os.getenv("PINATA_GATEWAY_URL", "https://gateway.pinata.cloud/ipfs")
 
 # AES-256 encryption key (32 bytes). Loaded from .env or auto-generated once.
