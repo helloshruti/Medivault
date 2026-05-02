@@ -1068,3 +1068,38 @@ def update_symptoms(symptoms: List[Symptom]):
 @app.get("/")
 def read_root():
     return {"message": "Medivault Backend is running"}
+
+
+# ─── Medical Chatbot (Ollama) ─────────────────────────────────────────────────
+
+OLLAMA_URL = "http://localhost:11434/api/generate"
+OLLAMA_MODEL = "llama3.2"
+
+SYSTEM_PROMPT = (
+    "You are MediVault AI, a helpful medical assistant. "
+    "Answer questions clearly and concisely about medications, symptoms, conditions, and general health. "
+    "Always remind users to consult a doctor for personal medical advice. "
+    "Keep answers under 150 words. Do not use bullet points unless listing more than 3 items."
+)
+
+class ChatRequest(BaseModel):
+    message: str
+
+@app.post("/chat")
+def chat(req: ChatRequest):
+    prompt = f"{SYSTEM_PROMPT}\n\nUser: {req.message}\nAssistant:"
+    try:
+        response = requests.post(
+            OLLAMA_URL,
+            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
+            timeout=60,
+        )
+        if response.status_code == 200:
+            reply = response.json().get("response", "").strip()
+            return {"reply": reply}
+        else:
+            return {"reply": "Ollama returned an error. Make sure it is running: `ollama serve`"}
+    except requests.exceptions.ConnectionError:
+        return {"reply": "Could not connect to Ollama. Run `ollama serve` in a terminal, then try again."}
+    except Exception as e:
+        return {"reply": f"Something went wrong: {str(e)}"}
