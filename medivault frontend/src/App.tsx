@@ -7,6 +7,7 @@ import { FamilyProfiles } from './components/FamilyProfiles';
 import { MobileNav } from './components/MobileNav';
 import { Auth } from './components/Auth';
 import { useAuth } from './context/AuthContext';
+import { ProfileProvider } from './context/ProfileContext';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -32,9 +33,11 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {renderPage()}
-      <MobileNav currentPage={currentPage} onNavigate={setCurrentPage} />
-    </div>
+    <ProfileProvider>
+      <div className="min-h-screen bg-gray-50 pb-20">
+        {renderPage()}
+        <MobileNav currentPage={currentPage} onNavigate={setCurrentPage} />
+      </div>
+    </ProfileProvider>
   );
 }

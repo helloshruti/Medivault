@@ -1,10 +1,11 @@
-import { FileText, Upload, Search, Download, Share2, Filter, Loader2, ExternalLink, Trash2, Image, FileCheck } from 'lucide-react';
+import { FileText, Upload, Search, Share2, Filter, Loader2, ExternalLink, Trash2, Image, FileCheck } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
 import { useState, useRef, ChangeEvent, useEffect, useCallback } from 'react';
+import { useProfile } from '../context/ProfileContext';
 
 interface DocumentsProps {
   onNavigate: (page: string) => void;
@@ -55,6 +56,7 @@ function formatDate(iso: string): string {
 }
 
 export function Documents({ onNavigate }: DocumentsProps) {
+  const { profiles, selectedProfileId, setSelectedProfileId } = useProfile();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -66,12 +68,13 @@ export function Documents({ onNavigate }: DocumentsProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Fetch documents from backend
+  // Fetch documents filtered by selected profile
   const fetchDocuments = useCallback(async () => {
+    if (!selectedProfileId) return;
     try {
       const [docsRes, statsRes] = await Promise.all([
-        fetch('http://localhost:8000/documents'),
-        fetch('http://localhost:8000/documents/stats/summary'),
+        fetch(`http://localhost:8000/documents?profile=${selectedProfileId}`),
+        fetch(`http://localhost:8000/documents/stats/summary?profile=${selectedProfileId}`),
       ]);
       const docsData = await docsRes.json();
       const statsData = await statsRes.json();
@@ -82,7 +85,7 @@ export function Documents({ onNavigate }: DocumentsProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedProfileId]);
 
   useEffect(() => {
     fetchDocuments();
@@ -102,7 +105,7 @@ export function Documents({ onNavigate }: DocumentsProps) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('doc_type', uploadDocType);
-    formData.append('profile', 'self');
+    formData.append('profile', selectedProfileId);
 
     try {
       const response = await fetch('http://localhost:8000/upload', {
@@ -167,14 +170,14 @@ export function Documents({ onNavigate }: DocumentsProps) {
           <h1 className="mb-4">Medical Documents</h1>
           
           {/* Profile Selector */}
-          <Select defaultValue="self">
+          <Select value={selectedProfileId} onValueChange={setSelectedProfileId}>
             <SelectTrigger className="w-full mb-3">
               <SelectValue placeholder="Select profile" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="self">Tanishka (Self)</SelectItem>
-              <SelectItem value="sister">Shruti (Sister)</SelectItem>
-              <SelectItem value="mother">Trisha (Mother)</SelectItem>
+              {profiles.map(p => (
+                <SelectItem key={p.id} value={p.id}>{p.name} ({p.relation})</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 

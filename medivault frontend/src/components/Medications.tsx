@@ -1,4 +1,4 @@
-import { Pill, Plus, Clock, Edit, Trash2, CheckCircle2, Circle, Upload, FileCheck, Loader2 } from 'lucide-react';
+import { Pill, Plus, Edit, Trash2, CheckCircle2, Circle, Upload, FileCheck, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
@@ -6,6 +6,7 @@ import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useState, useEffect } from 'react';
+import { useProfile } from '../context/ProfileContext';
 
 interface MedicationsProps {
   onNavigate: (page: string) => void;
@@ -22,6 +23,7 @@ interface Medication {
 }
 
 export function Medications({ onNavigate }: MedicationsProps) {
+  const { profiles, selectedProfileId, setSelectedProfileId } = useProfile();
   const [medications, setMedications] = useState<Medication[]>([]);
   const [newMedName, setNewMedName] = useState('');
   const [newMedDosage, setNewMedDosage] = useState('');
@@ -31,17 +33,18 @@ export function Medications({ onNavigate }: MedicationsProps) {
   const [prescriptionUploading, setPrescriptionUploading] = useState(false);
   const [prescriptionStatus, setPrescriptionStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Load meds
+  // Re-fetch meds when profile changes
   useEffect(() => {
-    fetch('http://localhost:8000/medications')
+    if (!selectedProfileId) return;
+    fetch(`http://localhost:8000/medications?profile=${selectedProfileId}`)
       .then(res => res.json())
       .then(data => setMedications(data))
       .catch(err => console.error(err));
-  }, []);
+  }, [selectedProfileId]);
 
   const saveMeds = (newMeds: Medication[]) => {
     setMedications(newMeds);
-    fetch('http://localhost:8000/medications', {
+    fetch(`http://localhost:8000/medications?profile=${selectedProfileId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newMeds),
@@ -123,14 +126,14 @@ export function Medications({ onNavigate }: MedicationsProps) {
           <h1 className="mb-4">Medications</h1>
 
           {/* Profile Selector */}
-          <Select defaultValue="self">
+          <Select value={selectedProfileId} onValueChange={setSelectedProfileId}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select profile" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="self">Tanishka (Self)</SelectItem>
-              <SelectItem value="sister">Shruti (Sister)</SelectItem>
-              <SelectItem value="mother">Trisha (Mother)</SelectItem>
+              {profiles.map(p => (
+                <SelectItem key={p.id} value={p.id}>{p.name} ({p.relation})</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -220,7 +223,7 @@ export function Medications({ onNavigate }: MedicationsProps) {
                             const formData = new FormData();
                             formData.append('file', file);
                             formData.append('doc_type', 'prescription');
-                            formData.append('profile', 'self');
+                            formData.append('profile', selectedProfileId);
 
                             try {
                               const res = await fetch('http://localhost:8000/upload', {

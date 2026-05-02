@@ -886,43 +886,40 @@ class Medication(BaseModel):
     timeOfDay: str
     active: bool
     takenToday: bool = False
+    profileId: str = "1"
 
-def load_meds():
+def load_meds_raw() -> list:
     if os.path.exists(MEDS_FILE):
         with open(MEDS_FILE, "r") as f:
             return json.load(f)
     return [
-        {
-            "id": "1",
-            "name": "Lisinopril",
-            "dosage": "10mg",
-            "frequency": "once",
-            "timeOfDay": "morning",
-            "active": True,
-            "takenToday": False
-        },
-        {
-            "id": "2",
-            "name": "Metformin",
-            "dosage": "800mg",
-            "frequency": "twice",
-            "timeOfDay": "morning",
-            "active": True,
-            "takenToday": False
-        }
+        {"id": "1", "name": "Lisinopril", "dosage": "10mg", "frequency": "once",
+         "timeOfDay": "morning", "active": True, "takenToday": False, "profileId": "1"},
+        {"id": "2", "name": "Metformin", "dosage": "800mg", "frequency": "twice",
+         "timeOfDay": "morning", "active": True, "takenToday": False, "profileId": "1"},
     ]
 
-def save_meds(data):
+def save_meds_raw(data: list):
     with open(MEDS_FILE, "w") as f:
-        json.dump([m.dict() for m in data], f, indent=2)
+        json.dump(data, f, indent=2)
 
 @app.get("/medications", response_model=List[Medication])
-def get_medications():
-    return load_meds()
+def get_medications(profile: Optional[str] = None):
+    meds = load_meds_raw()
+    if profile:
+        meds = [m for m in meds if m.get("profileId", "1") == profile]
+    return meds
 
 @app.post("/medications")
-def update_medications(meds: List[Medication]):
-    save_meds(meds)
+def update_medications(meds: List[Medication], profile: Optional[str] = None):
+    all_meds = load_meds_raw()
+    if profile:
+        # Keep other profiles' meds, replace current profile's meds
+        kept = [m for m in all_meds if m.get("profileId", "1") != profile]
+        incoming = [{**m.dict(), "profileId": profile} for m in meds]
+        save_meds_raw(kept + incoming)
+    else:
+        save_meds_raw([m.dict() for m in meds])
     return {"message": "Medications updated"}
 
 # ─── Symptom Data Storage ────────────────────────────────────────────────────

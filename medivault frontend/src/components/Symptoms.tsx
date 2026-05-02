@@ -1,4 +1,4 @@
-import { Activity, Plus, AlertCircle, TrendingUp } from 'lucide-react';
+import { Activity, Plus, TrendingUp } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
@@ -8,6 +8,7 @@ import { Slider } from './ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useState, useEffect } from 'react';
+import { useProfile } from '../context/ProfileContext';
 
 interface SymptomsProps {
   onNavigate: (page: string) => void;
@@ -24,16 +25,9 @@ interface Symptom {
   date: string;
 }
 
-interface Profile {
-  id: string;
-  name: string;
-  relation: string;
-}
-
 export function Symptoms({ onNavigate }: SymptomsProps) {
+  const { profiles, selectedProfileId, setSelectedProfileId } = useProfile();
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [selectedProfile, setSelectedProfile] = useState<string>('');
 
   const [symptomType, setSymptomType] = useState('');
   const [symptomDescription, setSymptomDescription] = useState('');
@@ -42,18 +36,7 @@ export function Symptoms({ onNavigate }: SymptomsProps) {
   const [duration, setDuration] = useState('');
   const [activeTab, setActiveTab] = useState('log');
 
-  // Load initial data
   useEffect(() => {
-    // Fetch profiles first
-    fetch('http://localhost:8000/family')
-      .then(res => res.json())
-      .then(data => {
-        setProfiles(data);
-        if (data.length > 0) setSelectedProfile(data[0].id);
-      })
-      .catch(err => console.error(err));
-
-    // Fetch symptoms
     fetch('http://localhost:8000/symptoms')
       .then(res => res.json())
       .then(data => setSymptoms(data))
@@ -74,14 +57,14 @@ export function Symptoms({ onNavigate }: SymptomsProps) {
       alert("Please select a symptom type.");
       return;
     }
-    if (!selectedProfile) {
+    if (!selectedProfileId) {
       alert("Please select a profile.");
       return;
     }
 
     const newSymptom: Symptom = {
       id: Math.random().toString(36).substr(2, 9),
-      profileId: selectedProfile,
+      profileId: selectedProfileId,
       type: symptomType,
       description: symptomDescription,
       severity: severity[0],
@@ -107,7 +90,7 @@ export function Symptoms({ onNavigate }: SymptomsProps) {
     return 'red';
   };
 
-  const filteredSymptoms = symptoms.filter(s => s.profileId === selectedProfile);
+  const filteredSymptoms = symptoms.filter(s => s.profileId === selectedProfileId);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -117,7 +100,7 @@ export function Symptoms({ onNavigate }: SymptomsProps) {
           <h1 className="mb-4">Symptoms</h1>
 
           {/* Profile Selector */}
-          <Select value={selectedProfile} onValueChange={setSelectedProfile}>
+          <Select value={selectedProfileId} onValueChange={setSelectedProfileId}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select profile" />
             </SelectTrigger>
@@ -241,7 +224,7 @@ export function Symptoms({ onNavigate }: SymptomsProps) {
               <Card className="p-4">
                 <div className="flex items-center gap-2 mb-4">
                   <TrendingUp className="w-5 h-5 text-blue-600" />
-                  <div>Summary for {profiles.find(p => p.id === selectedProfile)?.name}</div>
+                  <div>Summary for {profiles.find(p => p.id === selectedProfileId)?.name}</div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-gray-50 rounded-lg">

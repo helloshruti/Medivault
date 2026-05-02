@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { User, Plus, Edit, Trash2, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
+import { useProfile } from '../context/ProfileContext';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -70,6 +71,7 @@ const INITIAL_MEMBERS: FamilyMember[] = [
 ];
 
 export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
+  const { selectedProfileId, setSelectedProfileId } = useProfile();
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
@@ -166,14 +168,10 @@ export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
   };
 
   const handleSwitchProfile = (id: string) => {
-    const newMembers = members.map(m => ({
-      ...m,
-      active: m.id === id
-    }));
+    setSelectedProfileId(id);
+    const newMembers = members.map(m => ({ ...m, active: m.id === id }));
     saveToBackend(newMembers);
   };
-
-  const activeMember = members.find(m => m.active);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -189,19 +187,13 @@ export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
           </div>
 
           {/* Quick Selector */}
-          <Select
-            value={activeMember?.name.toLowerCase()}
-            onValueChange={(value: string) => {
-              const member = members.find(m => m.name.toLowerCase() === value);
-              if (member) handleSwitchProfile(member.id);
-            }}
-          >
+          <Select value={selectedProfileId} onValueChange={handleSwitchProfile}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Switch profile" />
             </SelectTrigger>
             <SelectContent>
               {members.map(m => (
-                <SelectItem key={m.id} value={m.name.toLowerCase()}>{m.name} ({m.relation})</SelectItem>
+                <SelectItem key={m.id} value={m.id}>{m.name} ({m.relation})</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -220,7 +212,7 @@ export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <div>{member.name}</div>
-                    {member.active && <Badge className="bg-green-600">Active</Badge>}
+                    {member.id === selectedProfileId && <Badge className="bg-green-600">Active</Badge>}
                   </div>
                   <div className="text-gray-500 text-sm">{member.relation}</div>
                   <div className="text-gray-400 text-xs">
@@ -247,26 +239,19 @@ export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
 
               {/* Actions */}
               <div className="flex gap-2">
-                {member.active ? (
-                  <Button
-                    className="flex-1"
-                    onClick={() => onNavigate('dashboard')}
-                  >
+                {member.id === selectedProfileId ? (
+                  <Button className="flex-1" onClick={() => onNavigate('dashboard')}>
                     View Dashboard
                   </Button>
                 ) : (
-                  <Button
-                    className="flex-1"
-                    variant="outline"
-                    onClick={() => handleSwitchProfile(member.id)}
-                  >
+                  <Button className="flex-1" variant="outline" onClick={() => handleSwitchProfile(member.id)}>
                     Switch to Profile
                   </Button>
                 )}
                 <Button variant="outline" size="icon" onClick={() => handleOpenEdit(member)}>
                   <Edit className="w-4 h-4" />
                 </Button>
-                {!member.active && (
+                {member.id !== selectedProfileId && (
                   <Button variant="outline" size="icon" className="text-red-500 hover:text-red-700" onClick={() => handleDelete(member.id)}>
                     <Trash2 className="w-4 h-4" />
                   </Button>

@@ -1,8 +1,7 @@
-import { Heart, Bell, ChevronRight, Pill, Activity, FileText, Calendar, Brain, User } from 'lucide-react';
+import { Heart, Bell, Pill, Activity, FileText, Calendar, Brain, User } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
-import { Progress } from './ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -10,15 +9,10 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useProfile } from '../context/ProfileContext';
 
 interface DashboardProps {
   onNavigate: (page: string) => void;
-}
-
-interface Profile {
-  id: string;
-  name: string;
-  relation: string;
 }
 
 interface Symptom {
@@ -45,8 +39,7 @@ interface Medication {
 export function Dashboard({ onNavigate }: DashboardProps) {
   const { user } = useAuth();
   const displayName = user ? user.name.split(' ').filter((part) => !/^\d+$/.test(part)).join(' ') : '';
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [selectedProfile, setSelectedProfile] = useState<string>('');
+  const { profiles, selectedProfileId, setSelectedProfileId } = useProfile();
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [isVitalsOpen, setIsVitalsOpen] = useState(false);
@@ -60,32 +53,23 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     { id: 'age', name: 'Age', value: '45 yrs', icon: User, color: 'indigo' },
   ]);
 
-  // Load data
+  // Load data — re-fetch meds when profile changes
   useEffect(() => {
-    // Profiles
-    fetch('http://localhost:8000/family')
-      .then(res => res.json())
-      .then(data => {
-        setProfiles(data);
-        if (data.length > 0) setSelectedProfile(data[0].id);
-      })
-      .catch(err => console.error(err));
-
-    // Symptoms
     fetch('http://localhost:8000/symptoms')
       .then(res => res.json())
       .then(data => setSymptoms(data))
       .catch(err => console.error(err));
+  }, []);
 
-    // Medications (Note: Currently shared across profiles)
-    fetch('http://localhost:8000/medications')
+  useEffect(() => {
+    if (!selectedProfileId) return;
+    fetch(`http://localhost:8000/medications?profile=${selectedProfileId}`)
       .then(res => res.json())
       .then(data => setMedications(data))
       .catch(err => console.error(err));
-  }, []);
+  }, [selectedProfileId]);
 
-  const currentProfile = profiles.find(p => p.id === selectedProfile);
-  const profileSymptoms = symptoms.filter(s => s.profileId === selectedProfile).slice(0, 3);
+  const profileSymptoms = symptoms.filter(s => s.profileId === selectedProfileId).slice(0, 3);
   const nextMedication = medications.find(m => m.active && !m.takenToday);
 
   const dashboardVitals = vitals.slice(0, 3);
@@ -138,7 +122,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </div>
 
           {/* Profile Selector */}
-          <Select value={selectedProfile} onValueChange={setSelectedProfile}>
+          <Select value={selectedProfileId} onValueChange={setSelectedProfileId}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder={profiles.length > 0 ? "Select profile" : "Loading profiles..."} />
             </SelectTrigger>
@@ -297,7 +281,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           {/* Recent Symptoms */}
           <Card className="p-4">
             <div className="flex items-center justify-between mb-4">
-              <div>Recent Symptoms ({currentProfile?.name})</div>
+              <div>Recent Symptoms ({profiles.find(p => p.id === selectedProfileId)?.name})</div>
               <Button
                 variant="link"
                 size="sm"
