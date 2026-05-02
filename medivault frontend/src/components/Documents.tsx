@@ -118,9 +118,12 @@ export function Documents({ onNavigate }: DocumentsProps) {
       if (data.success) {
         const detectedLabel = DOC_TYPE_CONFIG[data.doc_type]?.label || data.doc_type;
         const autoNote = data.auto_detected ? ` Detected as: ${detectedLabel}.` : '';
+        const medsNote = data.extracted_medications?.length
+          ? ` ${data.extracted_medications.length} medication(s) added to Meds tab.`
+          : '';
         setUploadStatus({
           type: 'success',
-          message: `"${file.name}" uploaded successfully.${autoNote}`
+          message: `"${file.name}" uploaded successfully.${autoNote}${medsNote}`
         });
         // Refresh document list
         fetchDocuments();

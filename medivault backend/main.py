@@ -116,6 +116,96 @@ def classify_document(file_path: str) -> str:
     best = max(scores, key=scores.get)
     return best if scores[best] > 0 else "lab"
 
+
+_TIME_MAP = {
+    "breakfast": "morning", "morning": "morning",
+    "9:00 am": "morning", "8:00 am": "morning", "10:00 am": "morning",
+    "lunch": "noon", "noon": "noon", "12:00 pm": "noon",
+    "afternoon": "afternoon", "3:00 pm": "afternoon", "2:00 pm": "afternoon",
+    "evening": "evening", "6:00 pm": "evening", "5:00 pm": "evening",
+    "dinner": "night", "night": "night", "bedtime": "night",
+    "8:00 pm": "night", "9:00 pm": "night", "10:00 pm": "night",
+}
+
+_FREQ_MAP = {
+    "once daily": "once", "once a day": "once", "od": "once",
+    "twice daily": "twice", "twice a day": "twice", "bd": "twice", "bid": "twice",
+    "three times": "three", "thrice": "three", "tds": "three", "tid": "three",
+    "as needed": "asneeded", "prn": "asneeded", "as required": "asneeded",
+}
+
+
+def parse_medications_from_text(text: str, profile_id: str) -> list:
+    """
+    Extract medication entries from prescription OCR text.
+    Handles numbered lines like:
+      1. Paracetol-500 — 1 tablet after breakfast (9:00 AM)
+      2. Coughnil Syrup — 10 ml after dinner (8:00 PM)
+    """
+    import re
+    medications = []
+    text_lower = text.lower()
+    lines = text.split("\n")
+
+    for line in lines:
+        line = line.strip()
+        # Only process numbered medication lines
+        m = re.match(r"^\d+[.)]\s+(.+)", line)
+        if not m:
+            continue
+
+        content = m.group(1).strip()
+        content_lower = content.lower()
+
+        # Split on em-dash, regular dash used as separator, or colon
+        parts = re.split(r"\s*[—–\-]\s*", content, maxsplit=1)
+        name = parts[0].strip()
+        rest = parts[1].strip() if len(parts) > 1 else content
+
+        # Clean up: remove leading numbers that bled into the name
+        name = re.sub(r"^\d+\.\s*", "", name).strip()
+        if not name or len(name) < 2:
+            continue
+
+        # Dosage: first numeric+unit pattern in rest (or full content)
+        dosage_match = re.search(
+            r"(\d+(?:\.\d+)?\s*(?:mg|mcg|g|ml|tablet|tab|capsule|cap|drop|puff|unit)s?)",
+            rest, re.IGNORECASE
+        )
+        dosage = dosage_match.group(1).strip() if dosage_match else "As prescribed"
+
+        # Time of day
+        time_of_day = "morning"
+        for keyword, slot in _TIME_MAP.items():
+            if keyword in content_lower:
+                time_of_day = slot
+                break
+
+        # Frequency
+        frequency = "once"
+        for keyword, freq in _FREQ_MAP.items():
+            if keyword in content_lower:
+                frequency = freq
+                break
+
+        med_id = hashlib.md5(
+            f"{name}{profile_id}{datetime.now().isoformat()}".encode()
+        ).hexdigest()[:9]
+
+        medications.append({
+            "id": med_id,
+            "name": name,
+            "dosage": dosage,
+            "frequency": frequency,
+            "timeOfDay": time_of_day,
+            "active": True,
+            "takenToday": False,
+            "profileId": profile_id,
+        })
+        print(f"[PRESCRIPTION] Parsed: {name} | {dosage} | {time_of_day}")
+
+    return medications
+
 # Load environment variables
 load_dotenv()
 
@@ -393,10 +483,14 @@ async def upload_file(
 
     original_size = os.path.getsize(file_location)
 
-    # Step 2: Auto-classify via OCR when requested
+    # Step 2: Auto-classify via OCR when requested; also cache extracted text
     auto_detected = False
+    _ocr_text = ""
     if doc_type == "auto":
-        doc_type = classify_document(file_location)
+        _ocr_text = _extract_text(file_location)
+        scores = {k: sum(1 for kw in kws if kw in _ocr_text) for k, kws in _KEYWORDS.items()}
+        best = max(scores, key=scores.get)
+        doc_type = best if scores[best] > 0 else "lab"
         auto_detected = True
         print(f"[OCR] Auto-classified '{filename}' as '{doc_type}'")
 
@@ -453,6 +547,21 @@ async def upload_file(
     docs.insert(0, doc_meta)  # newest first
     save_documents(docs)
 
+    # ── If this is a prescription, parse and auto-add medications ─────────────
+    extracted_medications = []
+    if doc_type == "prescription":
+        # Use cached OCR text if available, otherwise re-extract
+        ocr_text = _ocr_text if _ocr_text else _extract_text(file_location)
+        extracted_medications = parse_medications_from_text(ocr_text, profile)
+        if extracted_medications:
+            all_meds = load_meds_raw()
+            # Avoid duplicates: skip if same name+profile already exists
+            existing_names = {m["name"].lower() for m in all_meds if m.get("profileId") == profile}
+            new_meds = [m for m in extracted_medications if m["name"].lower() not in existing_names]
+            if new_meds:
+                save_meds_raw(all_meds + new_meds)
+                print(f"[PRESCRIPTION] Added {len(new_meds)} medication(s) for profile {profile}")
+
     return {
         "success": True,
         "filename": filename,
@@ -463,6 +572,7 @@ async def upload_file(
         "doc_type": doc_type,
         "auto_detected": auto_detected,
         "encrypted": True,
+        "extracted_medications": extracted_medications,
         "message": "File encrypted with AES-256, uploaded to IPFS, and SHA-256 hash stored in database"
     }
 

@@ -34,12 +34,16 @@ export function Medications({ onNavigate }: MedicationsProps) {
   const [prescriptionStatus, setPrescriptionStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Re-fetch meds when profile changes
-  useEffect(() => {
+  const fetchMeds = () => {
     if (!selectedProfileId) return;
     fetch(`http://localhost:8000/medications?profile=${selectedProfileId}`)
       .then(res => res.json())
       .then(data => setMedications(data))
       .catch(err => console.error(err));
+  };
+
+  useEffect(() => {
+    fetchMeds();
   }, [selectedProfileId]);
 
   const saveMeds = (newMeds: Medication[]) => {
@@ -233,10 +237,14 @@ export function Medications({ onNavigate }: MedicationsProps) {
                               const data = await res.json();
 
                               if (data.success) {
+                                const medsAdded = data.extracted_medications?.length ?? 0;
                                 setPrescriptionStatus({
                                   type: 'success',
-                                  message: `Prescription uploaded successfully.`
+                                  message: medsAdded
+                                    ? `Prescription uploaded. ${medsAdded} medication(s) added below.`
+                                    : 'Prescription uploaded successfully.'
                                 });
+                                if (medsAdded) fetchMeds();
                               } else {
                                 setPrescriptionStatus({
                                   type: 'error',
