@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useState, useEffect } from 'react';
 import { useProfile } from '../context/ProfileContext';
 import { useAuth } from '../context/AuthContext';
+import { API_URL } from "../config";
 
 interface MedicationsProps {
   onNavigate: (page: string) => void;
@@ -39,7 +40,7 @@ export function Medications({ onNavigate }: MedicationsProps) {
   // Re-fetch meds when profile changes
   const fetchMeds = () => {
     if (!selectedProfileId) return;
-    fetch(`http://localhost:8000/medications?profile=${selectedProfileId}&user=${userEmail}`)
+    fetch(`${API_URL}/medications?profile=${selectedProfileId}&user=${userEmail}`)
       .then(res => res.json())
       .then(data => setMedications(data))
       .catch(err => console.error(err));
@@ -51,7 +52,7 @@ export function Medications({ onNavigate }: MedicationsProps) {
 
   const saveMeds = (newMeds: Medication[]) => {
     setMedications(newMeds);
-    fetch(`http://localhost:8000/medications?profile=${selectedProfileId}&user=${userEmail}`, {
+    fetch(`${API_URL}/medications?profile=${selectedProfileId}&user=${userEmail}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newMeds),
@@ -234,7 +235,7 @@ export function Medications({ onNavigate }: MedicationsProps) {
                             formData.append('user', user?.email || '');
 
                             try {
-                              const res = await fetch('http://localhost:8000/upload', {
+                              const res = await fetch(`${API_URL}/upload`, {
                                 method: 'POST',
                                 body: formData,
                               });

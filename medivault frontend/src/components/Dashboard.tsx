@@ -10,6 +10,7 @@ import { Label } from './ui/label';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useProfile } from '../context/ProfileContext';
+import { API_URL } from "../config";
 
 interface DashboardProps {
   onNavigate: (page: string) => void;
@@ -93,7 +94,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   // Load data — re-fetch meds when profile changes
   useEffect(() => {
     if (!userEmail) return;
-    fetch(`http://localhost:8000/symptoms?user=${userEmail}`)
+    fetch(`${API_URL}/symptoms?user=${userEmail}`)
       .then(res => res.json())
       .then(data => setSymptoms(data))
       .catch(err => console.error(err));
@@ -101,7 +102,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
   useEffect(() => {
     if (!selectedProfileId || !userEmail) return;
-    fetch(`http://localhost:8000/medications?profile=${selectedProfileId}&user=${userEmail}`)
+    fetch(`${API_URL}/medications?profile=${selectedProfileId}&user=${userEmail}`)
       .then(res => res.json())
       .then(data => setMedications(data))
       .catch(err => console.error(err));
@@ -160,7 +161,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     setChatLoading(true);
     setTimeout(() => { if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight; }, 50);
     try {
-      const res = await fetch('http://localhost:8000/chat', {
+      const res = await fetch(`${API_URL}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
@@ -185,7 +186,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
     // Append to dataset
     const get = (id: string) => updated.find(v => v.id === id)?.value ?? '';
-    fetch('http://localhost:8000/vitals/record', {
+    fetch(`${API_URL}/vitals/record`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

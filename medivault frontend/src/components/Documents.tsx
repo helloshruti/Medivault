@@ -7,6 +7,7 @@ import { Badge } from './ui/badge';
 import { useState, useRef, ChangeEvent, useEffect, useCallback } from 'react';
 import { useProfile } from '../context/ProfileContext';
 import { useAuth } from '../context/AuthContext';
+import { API_URL } from "../config";
 
 interface DocumentsProps {
   onNavigate: (page: string) => void;
@@ -77,8 +78,8 @@ export function Documents({ onNavigate }: DocumentsProps) {
     if (!selectedProfileId) return;
     try {
       const [docsRes, statsRes] = await Promise.all([
-        fetch(`http://localhost:8000/documents?profile=${selectedProfileId}&user=${userEmail}`),
-        fetch(`http://localhost:8000/documents/stats/summary?profile=${selectedProfileId}&user=${userEmail}`),
+        fetch(`${API_URL}/documents?profile=${selectedProfileId}&user=${userEmail}`),
+        fetch(`${API_URL}/documents/stats/summary?profile=${selectedProfileId}&user=${userEmail}`),
       ]);
       const docsData = await docsRes.json();
       const statsData = await statsRes.json();
@@ -113,7 +114,7 @@ export function Documents({ onNavigate }: DocumentsProps) {
     formData.append('user', user?.email || '');
 
     try {
-      const response = await fetch('http://localhost:8000/upload', {
+      const response = await fetch(`${API_URL}/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -153,7 +154,7 @@ export function Documents({ onNavigate }: DocumentsProps) {
 
   const handleReclassify = async (docId: string, newType: string) => {
     try {
-      await fetch(`http://localhost:8000/documents/${docId}?user=${userEmail}`, {
+      await fetch(`${API_URL}/documents/${docId}?user=${userEmail}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ doc_type: newType }),
@@ -167,7 +168,7 @@ export function Documents({ onNavigate }: DocumentsProps) {
   const handleDelete = async (docId: string) => {
     if (!confirm('Remove this document from your records?')) return;
     try {
-      await fetch(`http://localhost:8000/documents/${docId}?user=${userEmail}`, { method: 'DELETE' });
+      await fetch(`${API_URL}/documents/${docId}?user=${userEmail}`, { method: 'DELETE' });
       fetchDocuments();
     } catch (err) {
       console.error('Failed to delete document:', err);
@@ -411,7 +412,7 @@ export function Documents({ onNavigate }: DocumentsProps) {
                           className="flex-1"
                           onClick={() => {
                             // Use the decryption proxy to view encrypted documents
-                            const viewUrl = `http://localhost:8000/documents/${doc.id}/view?user=${userEmail}`;
+                            const viewUrl = `${API_URL}/documents/${doc.id}/view?user=${userEmail}`;
                             window.open(viewUrl, '_blank');
                           }}
                         >
@@ -423,7 +424,7 @@ export function Documents({ onNavigate }: DocumentsProps) {
                           variant="outline"
                           className="flex-1"
                           onClick={() => {
-                            const viewUrl = `http://localhost:8000/documents/${doc.id}/view?user=${userEmail}`;
+                            const viewUrl = `${API_URL}/documents/${doc.id}/view?user=${userEmail}`;
                             navigator.clipboard.writeText(viewUrl);
                             alert('Document link copied to clipboard!');
                           }}

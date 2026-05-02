@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from './ui/dialog';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { API_URL } from "../config";
 
 interface FamilyProfilesProps {
   onNavigate: (page: string) => void;
@@ -83,7 +84,7 @@ export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
   // Load members from backend on mount
   useEffect(() => {
     if (!userEmail) return;
-    fetch(`http://localhost:8000/family?user=${userEmail}`)
+    fetch(`${API_URL}/family?user=${userEmail}`)
       .then(res => res.json())
       .then(data => setMembers(data))
       .catch(err => console.error("Failed to load family members:", err));
@@ -91,7 +92,7 @@ export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
 
   const saveToBackend = (newMembers: FamilyMember[]) => {
     setMembers(newMembers);
-    fetch(`http://localhost:8000/family?user=${userEmail}`, {
+    fetch(`${API_URL}/family?user=${userEmail}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newMembers),

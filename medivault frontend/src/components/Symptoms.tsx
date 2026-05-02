@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useState, useEffect } from 'react';
 import { useProfile } from '../context/ProfileContext';
 import { useAuth } from '../context/AuthContext';
+import { API_URL } from "../config";
 
 interface SymptomsProps {
   onNavigate: (page: string) => void;
@@ -40,7 +41,7 @@ export function Symptoms({ onNavigate }: SymptomsProps) {
   const [activeTab, setActiveTab] = useState('log');
 
   useEffect(() => {
-    fetch(`http://localhost:8000/symptoms?user=${userEmail}`)
+    fetch(`${API_URL}/symptoms?user=${userEmail}`)
       .then(res => res.json())
       .then(data => setSymptoms(data))
       .catch(err => console.error(err));
@@ -48,7 +49,7 @@ export function Symptoms({ onNavigate }: SymptomsProps) {
 
   const saveSymptoms = (newSymptoms: Symptom[]) => {
     setSymptoms(newSymptoms);
-    fetch(`http://localhost:8000/symptoms?user=${userEmail}`, {
+    fetch(`${API_URL}/symptoms?user=${userEmail}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newSymptoms),

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { API_URL } from "../config";
 
 export interface Profile {
   id: string;
@@ -27,7 +28,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const refreshProfiles = useCallback(() => {
     const storedUser = sessionStorage.getItem('medivault_user');
     const email = storedUser ? encodeURIComponent(JSON.parse(storedUser).email || '') : '';
-    fetch(`http://localhost:8000/family?user=${email}`)
+    fetch(`${API_URL}/family?user=${email}`)
       .then(res => res.json())
       .then((data: Profile[]) => {
         setProfiles(data);
