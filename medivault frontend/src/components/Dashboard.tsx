@@ -1,4 +1,4 @@
-import { Heart, Bell, Pill, Activity, FileText, Calendar, Brain, User, MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { Heart, Bell, Pill, Activity, FileText, Calendar, Brain, User, MessageCircle, Send, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -50,7 +50,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const [isVitalsOpen, setIsVitalsOpen] = useState(false);
 
   // Chat state
-  const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     { role: 'assistant', text: 'Hi! I\'m MediVault AI. Ask me anything about medications, symptoms, or general health.' }
   ]);
@@ -316,6 +315,59 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             )}
           </Card>
 
+          {/* AI Chatbot */}
+          <Card className="flex flex-col overflow-hidden" style={{ height: '420px' }}>
+            {/* Header */}
+            <div className="bg-blue-600 text-white px-4 py-3 flex items-center gap-2 flex-shrink-0">
+              <MessageCircle className="w-5 h-5" />
+              <div>
+                <div className="text-sm font-semibold">MediVault AI</div>
+                <div className="text-xs text-blue-200">Ask me anything health-related</div>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'bg-blue-600 text-white rounded-br-sm'
+                      : 'bg-white text-gray-800 rounded-bl-sm shadow-sm'
+                  }`}>
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-white rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm">
+                    <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Input */}
+            <div className="p-3 border-t border-gray-100 flex gap-2 flex-shrink-0 bg-white">
+              <input
+                className="flex-1 text-sm border border-gray-200 rounded-full px-3 py-2 outline-none focus:border-blue-400"
+                placeholder="Ask a health question..."
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendChatMessage()}
+              />
+              <button
+                onClick={sendChatMessage}
+                disabled={chatLoading || !chatInput.trim()}
+                className="w-9 h-9 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 disabled:opacity-40 transition-colors flex-shrink-0"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          </Card>
+
           {/* Recent Symptoms */}
           <Card className="p-4">
             <div className="flex items-center justify-between mb-4">
@@ -373,68 +425,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         </div>
       </div>
 
-      {/* Floating Chat Button */}
-      <button
-        onClick={() => setChatOpen(o => !o)}
-        className="fixed bottom-24 right-4 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center z-50 hover:bg-blue-700 transition-colors"
-      >
-        {chatOpen ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
-      </button>
-
-      {/* Chat Panel */}
-      {chatOpen && (
-        <div className="fixed bottom-40 right-4 w-80 h-96 bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200 overflow-hidden">
-          {/* Header */}
-          <div className="bg-blue-600 text-white px-4 py-3 flex items-center gap-2 flex-shrink-0">
-            <MessageCircle className="w-5 h-5" />
-            <div>
-              <div className="text-sm font-semibold">MediVault AI</div>
-              <div className="text-xs text-blue-200">Ask me anything health-related</div>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
-            {chatMessages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-blue-600 text-white rounded-br-sm'
-                    : 'bg-gray-100 text-gray-800 rounded-bl-sm'
-                }`}>
-                  {msg.text}
-                </div>
-              </div>
-            ))}
-            {chatLoading && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-3 py-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                </div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Input */}
-          <div className="p-3 border-t border-gray-100 flex gap-2 flex-shrink-0">
-            <input
-              className="flex-1 text-sm border border-gray-200 rounded-full px-3 py-2 outline-none focus:border-blue-400"
-              placeholder="Ask a health question..."
-              value={chatInput}
-              onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendChatMessage()}
-            />
-            <button
-              onClick={sendChatMessage}
-              disabled={chatLoading || !chatInput.trim()}
-              className="w-9 h-9 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 disabled:opacity-40 transition-colors flex-shrink-0"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
