@@ -3,4 +3,23 @@ node_modules/
 .DS_Store
 build/
 dist/
-	
+
+# macOS metadata
+._*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Runtime data files (generated at runtime, not source code)
+medivault backend/document_security.db
+medivault backend/documents_data.json
+medivault backend/family_data.json
+medivault backend/medications_data.json
+medivault backend/symptoms_data.json
+"medivault backend/new docs uploaded/"
+
+# Misc
+package-lock.json
