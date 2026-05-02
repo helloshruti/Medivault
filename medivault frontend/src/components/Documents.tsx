@@ -58,7 +58,7 @@ export function Documents({ onNavigate }: DocumentsProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [uploadDocType, setUploadDocType] = useState('lab');
+  const [uploadDocType, setUploadDocType] = useState('auto');
 
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [stats, setStats] = useState<DocStats>({ lab: 0, prescription: 0, imaging: 0, discharge: 0, insurance: 0, vaccination: 0, total: 0 });
@@ -113,9 +113,11 @@ export function Documents({ onNavigate }: DocumentsProps) {
       const data = await response.json();
 
       if (data.success) {
+        const detectedLabel = DOC_TYPE_CONFIG[data.doc_type]?.label || data.doc_type;
+        const autoNote = data.auto_detected ? ` Detected as: ${detectedLabel}.` : '';
         setUploadStatus({
           type: 'success',
-          message: `"${file.name}" uploaded to IPFS successfully.`
+          message: `"${file.name}" uploaded successfully.${autoNote}`
         });
         // Refresh document list
         fetchDocuments();
@@ -212,6 +214,7 @@ export function Documents({ onNavigate }: DocumentsProps) {
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="auto">Auto-detect (OCR)</SelectItem>
                   <SelectItem value="lab">Lab Report</SelectItem>
                   <SelectItem value="prescription">Prescription</SelectItem>
                   <SelectItem value="imaging">Bills & Images</SelectItem>

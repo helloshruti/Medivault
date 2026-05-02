@@ -1,12 +1,11 @@
 fastapi
 uvicorn
 python-multipart
-<<<<<<< HEAD
 passlib[bcrypt]
-=======
 requests
 python-dotenv
 pycryptodome
 google-generativeai
 Pillow
->>>>>>> e0fa3bc5ba42b41cbdeb8f8ef8c28e76d397f1ab
+pdfplumber
+pytesseract

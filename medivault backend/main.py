@@ -15,6 +15,85 @@ from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 import base64
 
+# ─── OCR / Document Classification ──────────────────────────────────────────
+
+def _extract_text(file_path: str) -> str:
+    """Extract text from a PDF or image file. Returns lowercase string."""
+    ext = os.path.splitext(file_path)[1].lower()
+    text = ""
+
+    if ext == ".pdf":
+        try:
+            import pdfplumber
+            with pdfplumber.open(file_path) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+        except Exception as e:
+            print(f"[OCR] pdfplumber error: {e}")
+
+    if ext in (".jpg", ".jpeg", ".png"):
+        try:
+            import pytesseract
+            from PIL import Image
+            img = Image.open(file_path)
+            text = pytesseract.image_to_string(img)
+        except Exception as e:
+            print(f"[OCR] pytesseract error: {e}")
+
+    return text.lower()
+
+
+_KEYWORDS = {
+    "lab": [
+        "hemoglobin", "hb", "wbc", "rbc", "cbc", "glucose", "creatinine",
+        "bilirubin", "platelet", "lab report", "test result", "blood test",
+        "urine test", "hba1c", "cholesterol", "lipid", "serum", "plasma",
+        "specimen", "reference range", "normal range", "pathology", "laboratory",
+        "complete blood count", "thyroid", "tsh", "t3", "t4",
+    ],
+    "prescription": [
+        "prescribed", "prescription", "rx", "tablet", "capsule", "syrup",
+        "dosage", "dose", "twice daily", "once daily", "morning", "evening",
+        "refill", "physician", "pharmacist", "pharmacy", "take one", "take two",
+        "directions", "sig:", "dispense", "repeat",
+    ],
+    "imaging": [
+        "x-ray", "xray", "mri", "ct scan", "ultrasound", "radiology",
+        "imaging", "bill", "invoice", "amount due", "payment", "receipt",
+        "total amount", "charges", "billing", "hospital bill", "due date",
+        "account number", "statement",
+    ],
+    "discharge": [
+        "discharge summary", "admitted", "discharge date", "final diagnosis",
+        "hospital stay", "inpatient", "attending physician", "ward",
+        "length of stay", "condition on discharge", "follow up", "consultant",
+        "procedure performed",
+    ],
+    "insurance": [
+        "policy", "premium", "claim", "coverage", "insurance", "insured",
+        "beneficiary", "policyholder", "deductible", "copay", "network",
+        "member id", "group number", "plan",
+    ],
+    "vaccination": [
+        "vaccine", "immunization", "vaccination", "dose", "booster",
+        "administered", "immunised", "covid", "influenza", "hepatitis",
+        "mmr", "tdap", "varicella", "polio", "dpt",
+    ],
+}
+
+
+def classify_document(file_path: str) -> str:
+    """Return the best-matching doc_type based on OCR keyword scoring."""
+    text = _extract_text(file_path)
+    if not text.strip():
+        return "lab"  # safe default when OCR yields nothing
+
+    scores = {k: sum(1 for kw in kws if kw in text) for k, kws in _KEYWORDS.items()}
+    best = max(scores, key=scores.get)
+    return best if scores[best] > 0 else "lab"
+
 # Load environment variables
 load_dotenv()
 
@@ -270,18 +349,19 @@ def save_documents(docs: list):
 @app.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    doc_type: str = Form("prescription"),
+    doc_type: str = Form("auto"),
     profile: str = Form("self")
 ):
     """
     Upload a medical document with full security:
     1. Save locally as temp
-    2. Compute SHA-256 hash of ORIGINAL file (integrity fingerprint)
-    3. Encrypt the file with AES-256-CBC
-    4. Upload ENCRYPTED file to Pinata IPFS
-    5. Store SHA-256 hash in SQLite security database
-    6. Store document metadata in JSON
-    7. Return document info
+    2. Auto-classify via OCR if doc_type == "auto"
+    3. Compute SHA-256 hash of ORIGINAL file (integrity fingerprint)
+    4. Encrypt the file with AES-256-CBC
+    5. Upload ENCRYPTED file to Pinata IPFS
+    6. Store SHA-256 hash in SQLite security database
+    7. Store document metadata in JSON
+    8. Return document info
     """
     # Step 1: Save file locally (temp)
     filename = file.filename or "unnamed_document"
@@ -291,7 +371,14 @@ async def upload_file(
 
     original_size = os.path.getsize(file_location)
 
-    # Step 2: Compute SHA-256 hash of the ORIGINAL file before encryption
+    # Step 2: Auto-classify via OCR when requested
+    auto_detected = False
+    if doc_type == "auto":
+        doc_type = classify_document(file_location)
+        auto_detected = True
+        print(f"[OCR] Auto-classified '{filename}' as '{doc_type}'")
+
+    # Step 3: Compute SHA-256 hash of the ORIGINAL file before encryption
     sha256_hash = compute_sha256(file_location)
 
     # Step 3: Encrypt the file with AES-256-CBC
@@ -351,6 +438,8 @@ async def upload_file(
         "gateway_url": pinata_result["gateway_url"],
         "sha256": sha256_hash,
         "doc_id": doc_id,
+        "doc_type": doc_type,
+        "auto_detected": auto_detected,
         "encrypted": True,
         "message": "File encrypted with AES-256, uploaded to IPFS, and SHA-256 hash stored in database"
     }
