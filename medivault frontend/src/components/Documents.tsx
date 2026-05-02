@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from './ui/badge';
 import { useState, useRef, ChangeEvent, useEffect, useCallback } from 'react';
 import { useProfile } from '../context/ProfileContext';
+import { useAuth } from '../context/AuthContext';
 
 interface DocumentsProps {
   onNavigate: (page: string) => void;
@@ -30,6 +31,7 @@ interface DocStats {
   discharge: number;
   insurance: number;
   vaccination: number;
+  unidentified: number;
   total: number;
 }
 
@@ -57,13 +59,15 @@ function formatDate(iso: string): string {
 
 export function Documents({ onNavigate }: DocumentsProps) {
   const { profiles, selectedProfileId, setSelectedProfileId } = useProfile();
+  const { user } = useAuth();
+  const userEmail = encodeURIComponent(user?.email || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [uploadDocType, setUploadDocType] = useState('auto');
 
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
-  const [stats, setStats] = useState<DocStats>({ lab: 0, prescription: 0, imaging: 0, discharge: 0, insurance: 0, vaccination: 0, total: 0 });
+  const [stats, setStats] = useState<DocStats>({ lab: 0, prescription: 0, imaging: 0, discharge: 0, insurance: 0, vaccination: 0, unidentified: 0, total: 0 });
   const [filterType, setFilterType] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -73,8 +77,8 @@ export function Documents({ onNavigate }: DocumentsProps) {
     if (!selectedProfileId) return;
     try {
       const [docsRes, statsRes] = await Promise.all([
-        fetch(`http://localhost:8000/documents?profile=${selectedProfileId}`),
-        fetch(`http://localhost:8000/documents/stats/summary?profile=${selectedProfileId}`),
+        fetch(`http://localhost:8000/documents?profile=${selectedProfileId}&user=${userEmail}`),
+        fetch(`http://localhost:8000/documents/stats/summary?profile=${selectedProfileId}&user=${userEmail}`),
       ]);
       const docsData = await docsRes.json();
       const statsData = await statsRes.json();
@@ -106,6 +110,7 @@ export function Documents({ onNavigate }: DocumentsProps) {
     formData.append('file', file);
     formData.append('doc_type', uploadDocType);
     formData.append('profile', selectedProfileId);
+    formData.append('user', user?.email || '');
 
     try {
       const response = await fetch('http://localhost:8000/upload', {
@@ -146,10 +151,23 @@ export function Documents({ onNavigate }: DocumentsProps) {
     }
   };
 
+  const handleReclassify = async (docId: string, newType: string) => {
+    try {
+      await fetch(`http://localhost:8000/documents/${docId}?user=${userEmail}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doc_type: newType }),
+      });
+      fetchDocuments();
+    } catch (err) {
+      console.error('Failed to reclassify document:', err);
+    }
+  };
+
   const handleDelete = async (docId: string) => {
     if (!confirm('Remove this document from your records?')) return;
     try {
-      await fetch(`http://localhost:8000/documents/${docId}`, { method: 'DELETE' });
+      await fetch(`http://localhost:8000/documents/${docId}?user=${userEmail}`, { method: 'DELETE' });
       fetchDocuments();
     } catch (err) {
       console.error('Failed to delete document:', err);
@@ -303,13 +321,45 @@ export function Documents({ onNavigate }: DocumentsProps) {
                   </div>
                 </Card>
               ))}
+
+              {/* View All tile */}
+              <Card
+                className={`p-3 cursor-pointer hover:shadow-md transition-shadow ${filterType === 'all' ? 'ring-2 ring-blue-400' : ''}`}
+                onClick={() => setFilterType('all')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">View All</div>
+                    <div className="text-xs text-gray-500">{stats.total} {stats.total === 1 ? 'file' : 'files'}</div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Unidentified tile */}
+              <Card
+                className={`p-3 cursor-pointer hover:shadow-md transition-shadow ${filterType === 'unidentified' ? 'ring-2 ring-gray-400' : ''}`}
+                onClick={() => setFilterType('unidentified')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-4 h-4 text-yellow-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">Unidentified</div>
+                    <div className="text-xs text-gray-500">{stats.unidentified || 0} {(stats.unidentified || 0) === 1 ? 'file' : 'files'}</div>
+                  </div>
+                </div>
+              </Card>
             </div>
           </div>
 
           {/* Documents List - Real data from backend/Pinata */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <div>{filterType === 'all' ? 'All Documents' : DOC_TYPE_CONFIG[filterType]?.label || 'Documents'}</div>
+              <div>{filterType === 'all' ? 'All Documents' : filterType === 'unidentified' ? 'Unidentified' : DOC_TYPE_CONFIG[filterType]?.label || 'Documents'}</div>
               <Badge variant="secondary">{filteredDocs.length}</Badge>
             </div>
 
@@ -358,6 +408,23 @@ export function Documents({ onNavigate }: DocumentsProps) {
                           </div>
                         </div>
                       </div>
+                      {doc.doc_type === 'unidentified' && (
+                        <div className="mb-2">
+                          <Select onValueChange={(value) => handleReclassify(doc.id, value)}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Classify as..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="lab">Lab Report</SelectItem>
+                              <SelectItem value="prescription">Prescription</SelectItem>
+                              <SelectItem value="bills">Bills</SelectItem>
+                              <SelectItem value="discharge">Discharge Summary</SelectItem>
+                              <SelectItem value="insurance">Insurance</SelectItem>
+                              <SelectItem value="vaccination">Vaccination</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <Button
                           size="sm"
@@ -365,7 +432,7 @@ export function Documents({ onNavigate }: DocumentsProps) {
                           className="flex-1"
                           onClick={() => {
                             // Use the decryption proxy to view encrypted documents
-                            const viewUrl = `http://localhost:8000/documents/${doc.id}/view`;
+                            const viewUrl = `http://localhost:8000/documents/${doc.id}/view?user=${userEmail}`;
                             window.open(viewUrl, '_blank');
                           }}
                         >
@@ -377,7 +444,7 @@ export function Documents({ onNavigate }: DocumentsProps) {
                           variant="outline"
                           className="flex-1"
                           onClick={() => {
-                            const viewUrl = `http://localhost:8000/documents/${doc.id}/view`;
+                            const viewUrl = `http://localhost:8000/documents/${doc.id}/view?user=${userEmail}`;
                             navigator.clipboard.writeText(viewUrl);
                             alert('Document link copied to clipboard!');
                           }}

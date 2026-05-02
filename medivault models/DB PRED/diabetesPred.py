@@ -66,10 +66,8 @@ plt.figure(figsize=(25,20))
 sb.heatmap(df.corr(), vmin=-1.0, center=0, cmap='RdBu_r', annot=True)
 plt.show()
 
-columns_to_scale = ['HighBP', 'HighChol', 'CholCheck', 'BMI', 'Smoker', 'Stroke',
-                    'HeartDiseaseorAttack', 'PhysActivity', 'Fruits', 'Veggies',
-                    'HvyAlcoholConsump', 'AnyHealthcare', 'NoDocbcCost', 'GenHlth',
-                    'MentHlth', 'PhysHlth', 'DiffWalk', 'Age', 'Education', 'Income']
+columns_to_scale = ['HighBP', 'HighChol', 'BMI', 'Smoker', 'PhysActivity',
+                    'Fruits', 'Veggies', 'HvyAlcoholConsump', 'Sex', 'Age']
 
 # Initialize StandardScaler
 scaler = StandardScaler()

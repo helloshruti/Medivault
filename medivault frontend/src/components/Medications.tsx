@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useState, useEffect } from 'react';
 import { useProfile } from '../context/ProfileContext';
+import { useAuth } from '../context/AuthContext';
 
 interface MedicationsProps {
   onNavigate: (page: string) => void;
@@ -24,6 +25,8 @@ interface Medication {
 
 export function Medications({ onNavigate }: MedicationsProps) {
   const { profiles, selectedProfileId, setSelectedProfileId } = useProfile();
+  const { user } = useAuth();
+  const userEmail = encodeURIComponent(user?.email || '');
   const [medications, setMedications] = useState<Medication[]>([]);
   const [newMedName, setNewMedName] = useState('');
   const [newMedDosage, setNewMedDosage] = useState('');
@@ -36,7 +39,7 @@ export function Medications({ onNavigate }: MedicationsProps) {
   // Re-fetch meds when profile changes
   const fetchMeds = () => {
     if (!selectedProfileId) return;
-    fetch(`http://localhost:8000/medications?profile=${selectedProfileId}`)
+    fetch(`http://localhost:8000/medications?profile=${selectedProfileId}&user=${userEmail}`)
       .then(res => res.json())
       .then(data => setMedications(data))
       .catch(err => console.error(err));
@@ -48,7 +51,7 @@ export function Medications({ onNavigate }: MedicationsProps) {
 
   const saveMeds = (newMeds: Medication[]) => {
     setMedications(newMeds);
-    fetch(`http://localhost:8000/medications?profile=${selectedProfileId}`, {
+    fetch(`http://localhost:8000/medications?profile=${selectedProfileId}&user=${userEmail}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newMeds),
@@ -228,6 +231,7 @@ export function Medications({ onNavigate }: MedicationsProps) {
                             formData.append('file', file);
                             formData.append('doc_type', 'prescription');
                             formData.append('profile', selectedProfileId);
+                            formData.append('user', user?.email || '');
 
                             try {
                               const res = await fetch('http://localhost:8000/upload', {

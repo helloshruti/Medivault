@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useProfile } from '../context/ProfileContext';
+import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -71,14 +72,17 @@ const INITIAL_MEMBERS: FamilyMember[] = [
 ];
 
 export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
-  const { selectedProfileId, setSelectedProfileId } = useProfile();
+  const { selectedProfileId, setSelectedProfileId, refreshProfiles } = useProfile();
+  const { user } = useAuth();
+  const userEmail = encodeURIComponent(user?.email || '');
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
 
   // Load members from backend on mount
   useEffect(() => {
-    fetch('http://localhost:8000/family')
+    if (!userEmail) return;
+    fetch(`http://localhost:8000/family?user=${userEmail}`)
       .then(res => res.json())
       .then(data => setMembers(data))
       .catch(err => console.error("Failed to load family members:", err));
@@ -86,11 +90,13 @@ export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
 
   const saveToBackend = (newMembers: FamilyMember[]) => {
     setMembers(newMembers);
-    fetch('http://localhost:8000/family', {
+    fetch(`http://localhost:8000/family?user=${userEmail}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newMembers),
-    }).catch(err => console.error("Failed to save family members:", err));
+    })
+      .then(() => refreshProfiles())
+      .catch(err => console.error("Failed to save family members:", err));
   };
 
   // Form State

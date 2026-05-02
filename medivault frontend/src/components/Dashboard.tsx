@@ -1,4 +1,4 @@
-import { Heart, Bell, Pill, Activity, FileText, Calendar, Brain, User, MessageCircle, Send, Loader2 } from 'lucide-react';
+import { Heart, Bell, Pill, Activity, FileText, Calendar, MessageCircle, Send, Loader2, Wind, Droplets, Apple, Venus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -44,7 +44,7 @@ interface ChatMessage {
 export function Dashboard({ onNavigate }: DashboardProps) {
   const { user } = useAuth();
   const displayName = user ? user.name.split(' ').filter((part) => !/^\d+$/.test(part)).join(' ') : '';
-  const { profiles, selectedProfileId, setSelectedProfileId } = useProfile();
+  const { profiles, selectedProfileId, setSelectedProfileId, selectedProfile } = useProfile();
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
   const [medications, setMedications] = useState<Medication[]>([]);
   const [isVitalsOpen, setIsVitalsOpen] = useState(false);
@@ -56,36 +56,94 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
-  const [vitals, setVitals] = useState([
-    { id: 'bp', name: 'Blood Pressure', value: '120/80 mmHg', icon: Heart, color: 'red' },
-    { id: 'hr', name: 'Heart Rate', value: '72 bpm', icon: Activity, color: 'blue' },
-    { id: 'temp', name: 'Temperature', value: '98.6°F', icon: Activity, color: 'orange' },
-    { id: 'gh', name: 'General Health', value: '4/5', icon: Activity, color: 'green' },
-    { id: 'mh', name: 'Mental Health', value: '4/5', icon: Brain, color: 'purple' },
-    { id: 'age', name: 'Age', value: '45 yrs', icon: User, color: 'indigo' },
-  ]);
+  const YESNO_IDS = ['highChol','smoker','physActivity','fruits','veggies','hvyAlcohol'];
+
+  const DEFAULT_VITALS = [
+    { id: 'bp',           name: 'Blood Pressure',    value: '120/80', icon: Heart,    color: 'red'    },
+    { id: 'highChol',     name: 'High Cholesterol',  value: 'No',     icon: Droplets, color: 'yellow' },
+    { id: 'bmi',          name: 'BMI',               value: '22',     icon: Activity, color: 'orange' },
+    { id: 'smoker',       name: 'Smoker',            value: 'No',     icon: Wind,     color: 'gray'   },
+    { id: 'physActivity', name: 'Physically Active', value: 'Yes',    icon: Activity, color: 'green'  },
+    { id: 'fruits',       name: 'Fruits Daily',      value: 'Yes',    icon: Apple,    color: 'lime'   },
+    { id: 'veggies',      name: 'Veggies Daily',     value: 'Yes',    icon: Apple,    color: 'green'  },
+    { id: 'hvyAlcohol',   name: 'Heavy Alcohol Use', value: 'No',     icon: Activity, color: 'orange' },
+  ];
+
+  const [vitals, setVitals] = useState(DEFAULT_VITALS);
+  const [vitalsForm, setVitalsForm] = useState<Record<string, string>>({});
+
+  // Load saved vitals for the selected profile
+  useEffect(() => {
+    if (!selectedProfileId) return;
+    const saved = localStorage.getItem(`mv_vitals_${user?.email}_${selectedProfileId}`);
+    if (saved) {
+      try {
+        const savedValues: Record<string, string> = JSON.parse(saved);
+        setVitals(DEFAULT_VITALS.map(v => ({ ...v, value: savedValues[v.id] ?? v.value })));
+      } catch { setVitals(DEFAULT_VITALS); }
+    } else {
+      setVitals(DEFAULT_VITALS);
+    }
+  }, [selectedProfileId]);
+
+  const userEmail = encodeURIComponent(user?.email || '');
 
   // Load data — re-fetch meds when profile changes
   useEffect(() => {
-    fetch('http://localhost:8000/symptoms')
+    if (!userEmail) return;
+    fetch(`http://localhost:8000/symptoms?user=${userEmail}`)
       .then(res => res.json())
       .then(data => setSymptoms(data))
       .catch(err => console.error(err));
-  }, []);
+  }, [userEmail]);
 
   useEffect(() => {
-    if (!selectedProfileId) return;
-    fetch(`http://localhost:8000/medications?profile=${selectedProfileId}`)
+    if (!selectedProfileId || !userEmail) return;
+    fetch(`http://localhost:8000/medications?profile=${selectedProfileId}&user=${userEmail}`)
       .then(res => res.json())
       .then(data => setMedications(data))
       .catch(err => console.error(err));
-  }, [selectedProfileId]);
+  }, [selectedProfileId, userEmail]);
 
   const profileSymptoms = symptoms.filter(s => s.profileId === selectedProfileId).slice(0, 3);
   const nextMedication = medications.find(m => m.active && !m.takenToday);
 
   const dashboardVitals = vitals.slice(0, 3);
+
+  const overallHealthScore = (() => {
+    const get = (id: string) => vitals.find(v => v.id === id)?.value ?? '';
+    let score = 10;
+
+    const bpSys = parseInt(get('bp').split('/')[0]);
+    if (!isNaN(bpSys)) {
+      if (bpSys >= 140)      score -= 2;
+      else if (bpSys >= 130) score -= 1;
+      else if (bpSys >= 120) score -= 0.5;
+    }
+    if (get('highChol') === 'Yes') score -= 1;
+    const bmi = parseFloat(get('bmi'));
+    if (!isNaN(bmi)) {
+      if (bmi < 18.5 || (bmi >= 25 && bmi < 30))   score -= 0.5;
+      else if (bmi >= 30 && bmi < 35)               score -= 1;
+      else if (bmi >= 35)                           score -= 1.5;
+    }
+    if (get('smoker') === 'Yes')      score -= 1;
+    if (get('physActivity') === 'No') score -= 0.5;
+    if (get('fruits') === 'No')         score -= 0.3;
+    if (get('veggies') === 'No')        score -= 0.3;
+    if (get('hvyAlcohol') === 'Yes')    score -= 1;
+    return Math.min(10, Math.max(1, Math.round(score)));
+  })();
+
+  const healthScoreConfig = overallHealthScore >= 8
+    ? { label: 'Excellent', color: 'text-green-600', bg: 'bg-green-50', bar: 'bg-green-500', ring: 'ring-green-400' }
+    : overallHealthScore >= 6
+    ? { label: 'Good', color: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-500', ring: 'ring-blue-400' }
+    : overallHealthScore >= 4
+    ? { label: 'Fair', color: 'text-yellow-600', bg: 'bg-yellow-50', bar: 'bg-yellow-500', ring: 'ring-yellow-400' }
+    : { label: 'Poor', color: 'text-red-600', bg: 'bg-red-50', bar: 'bg-red-500', ring: 'ring-red-400' };
 
   const getSeverityColor = (sev: number) => {
     if (sev <= 3) return 'green';
@@ -100,7 +158,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     setChatMessages(prev => [...prev, userMsg]);
     setChatInput('');
     setChatLoading(true);
-    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    setTimeout(() => { if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight; }, 50);
     try {
       const res = await fetch('http://localhost:8000/chat', {
         method: 'POST',
@@ -113,31 +171,38 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       setChatMessages(prev => [...prev, { role: 'assistant', text: 'Could not reach the AI. Make sure Ollama is running.' }]);
     } finally {
       setChatLoading(false);
-      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+      setTimeout(() => { if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight; }, 50);
     }
   };
 
-  const handleUpdateVitals = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const newVitals = [...vitals];
+  const handleUpdateVitals = () => {
+    const updated = vitals.map(v => vitalsForm[v.id] !== undefined ? { ...v, value: vitalsForm[v.id] } : v);
+    setVitals(updated);
+    if (selectedProfileId) {
+      const toSave = Object.fromEntries(updated.map(v => [v.id, v.value]));
+      localStorage.setItem(`mv_vitals_${user?.email}_${selectedProfileId}`, JSON.stringify(toSave));
+    }
 
-    const bp = formData.get('bp');
-    if (bp) newVitals[0].value = bp as string + ' mmHg';
+    // Append to dataset
+    const get = (id: string) => updated.find(v => v.id === id)?.value ?? '';
+    fetch('http://localhost:8000/vitals/record', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bp:           get('bp'),
+        highChol:     get('highChol'),
+        bmi:          get('bmi'),
+        smoker:       get('smoker'),
+        physActivity: get('physActivity'),
+        fruits:       get('fruits'),
+        veggies:      get('veggies'),
+        hvyAlcohol:   get('hvyAlcohol'),
+        age:          selectedProfile?.age ?? null,
+        gender:       selectedProfile?.gender ?? null,
+      }),
+    }).catch(err => console.error('Failed to record vitals:', err));
 
-    const hr = formData.get('hr');
-    if (hr) newVitals[1].value = hr + ' bpm';
-
-    const temp = formData.get('temp');
-    if (temp) newVitals[2].value = temp + '°F';
-
-    const gh = formData.get('gh');
-    if (gh) newVitals[3].value = gh + '/5';
-
-    const mh = formData.get('mh');
-    if (mh) newVitals[4].value = mh + '/5';
-
-    setVitals(newVitals);
+    setVitalsForm({});
     setIsVitalsOpen(false);
   };
 
@@ -236,47 +301,92 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                       <TabsTrigger value="all">All Vitals</TabsTrigger>
                       <TabsTrigger value="update">Update Vitals</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="all" className="mt-4 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                      <div className="space-y-3">
-                        {vitals.map((vital, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <TabsContent value="all" className="mt-4 max-h-[60vh] overflow-y-auto pr-2">
+                      <div className="space-y-2">
+                        {vitals.map((vital) => (
+                          <div key={vital.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 bg-${vital.color}-100 rounded-full flex items-center justify-center`}>
-                                <vital.icon className={`w-5 h-5 text-${vital.color}-600`} />
+                              <div className={`w-9 h-9 bg-${vital.color}-100 rounded-full flex items-center justify-center flex-shrink-0`}>
+                                <vital.icon className={`w-4 h-4 text-${vital.color}-600`} />
                               </div>
-                              <div>
-                                <div className="text-sm">{vital.name}</div>
-                                <div className="text-gray-500">{vital.value}</div>
-                              </div>
+                              <div className="text-sm">{vital.name}</div>
                             </div>
+                            <span className="text-sm font-medium text-gray-700">{vital.value}</span>
                           </div>
                         ))}
+                        {selectedProfile && (
+                          <>
+                            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <Activity className="w-4 h-4 text-blue-600" />
+                                </div>
+                                <div className="text-sm">Age</div>
+                              </div>
+                              <span className="text-sm font-medium text-gray-700">{selectedProfile.age ?? '—'} yrs</span>
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 bg-pink-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <Venus className="w-4 h-4 text-pink-600" />
+                                </div>
+                                <div className="text-sm">Gender</div>
+                              </div>
+                              <span className="text-sm font-medium text-gray-700">{selectedProfile.gender ?? '—'}</span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </TabsContent>
                     <TabsContent value="update" className="mt-4 max-h-[60vh] overflow-y-auto pr-2">
-                      <form onSubmit={handleUpdateVitals} className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="bp">Blood Pressure (e.g., 120/80)</Label>
-                          <Input id="bp" name="bp" placeholder={vitals[0].value.replace(' mmHg', '')} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="hr">Heart Rate (bpm)</Label>
-                          <Input id="hr" name="hr" placeholder={vitals[1].value.replace(' bpm', '')} type="number" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="temp">Temperature (°F)</Label>
-                          <Input id="temp" name="temp" placeholder={vitals[2].value.replace('°F', '')} type="number" step="0.1" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="gh">General Health (1-5)</Label>
-                          <Input id="gh" name="gh" placeholder={vitals[3].value.replace('/5', '')} type="number" min="1" max="5" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="mh">Mental Health (1-5)</Label>
-                          <Input id="mh" name="mh" placeholder={vitals[4].value.replace('/5', '')} type="number" min="1" max="5" />
-                        </div>
-                        <Button type="submit" className="w-full">Submit</Button>
-                      </form>
+                      <div className="space-y-4">
+                        {vitals.map((vital) => {
+                          const current = vitalsForm[vital.id] ?? vital.value;
+                          const isYesNo = YESNO_IDS.includes(vital.id);
+                          return (
+                            <div key={vital.id} className="space-y-1">
+                              <Label>{vital.name}</Label>
+                              {vital.id === 'bp' ? (
+                                <Input
+                                  placeholder="e.g. 120/80"
+                                  value={current}
+                                  onChange={e => setVitalsForm(prev => ({ ...prev, [vital.id]: e.target.value }))}
+                                />
+                              ) : isYesNo ? (
+                                <Select value={current} onValueChange={(v: string) => setVitalsForm(prev => ({ ...prev, [vital.id]: v }))}>
+                                  <SelectTrigger><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="No">No</SelectItem>
+                                    <SelectItem value="Yes">Yes</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <Input
+                                  type="number"
+                                  value={current}
+                                  min={0}
+                                  max={vital.id === 'bmi' ? 60 : 100}
+                                  step={vital.id === 'bmi' ? 0.1 : 1}
+                                  onChange={e => setVitalsForm(prev => ({ ...prev, [vital.id]: e.target.value }))}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                        {selectedProfile && (
+                          <div className="p-3 bg-blue-50 rounded-lg space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Age</span>
+                              <span className="font-medium">{selectedProfile.age ?? '—'} yrs <span className="text-xs text-gray-400">(from profile)</span></span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Gender</span>
+                              <span className="font-medium">{selectedProfile.gender ?? '—'} <span className="text-xs text-gray-400">(from profile)</span></span>
+                            </div>
+                          </div>
+                        )}
+                        <Button className="w-full" onClick={handleUpdateVitals}>Save Vitals</Button>
+                      </div>
                     </TabsContent>
                   </Tabs>
                 </DialogContent>
@@ -327,7 +437,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
+            <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50">
               {chatMessages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-sm leading-relaxed ${
@@ -421,6 +531,30 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                 </div>
               ))}
             </div>
+          </Card>
+
+          {/* Overall Health Score */}
+          <Card className="p-4">
+            <div className="mb-3">Overall Health Score</div>
+            <div className="flex items-center gap-4">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center flex-shrink-0 ring-4 ${healthScoreConfig.ring} ${healthScoreConfig.bg}`}>
+                <span className={`text-2xl font-bold ${healthScoreConfig.color}`}>{overallHealthScore}</span>
+              </div>
+              <div className="flex-1">
+                <div className={`text-sm font-semibold mb-1 ${healthScoreConfig.color}`}>{healthScoreConfig.label}</div>
+                <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-500 ${healthScoreConfig.bar}`}
+                    style={{ width: `${overallHealthScore * 10}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs text-gray-400">
+                  <span>1 — Poor</span>
+                  <span>10 — Best</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">Based on your vitals. Update them to keep this accurate.</p>
           </Card>
         </div>
       </div>

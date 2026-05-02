@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useState, useEffect } from 'react';
 import { useProfile } from '../context/ProfileContext';
+import { useAuth } from '../context/AuthContext';
 
 interface SymptomsProps {
   onNavigate: (page: string) => void;
@@ -27,6 +28,8 @@ interface Symptom {
 
 export function Symptoms({ onNavigate }: SymptomsProps) {
   const { profiles, selectedProfileId, setSelectedProfileId } = useProfile();
+  const { user } = useAuth();
+  const userEmail = encodeURIComponent(user?.email || '');
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
 
   const [symptomType, setSymptomType] = useState('');
@@ -37,15 +40,15 @@ export function Symptoms({ onNavigate }: SymptomsProps) {
   const [activeTab, setActiveTab] = useState('log');
 
   useEffect(() => {
-    fetch('http://localhost:8000/symptoms')
+    fetch(`http://localhost:8000/symptoms?user=${userEmail}`)
       .then(res => res.json())
       .then(data => setSymptoms(data))
       .catch(err => console.error(err));
-  }, []);
+  }, [userEmail]);
 
   const saveSymptoms = (newSymptoms: Symptom[]) => {
     setSymptoms(newSymptoms);
-    fetch('http://localhost:8000/symptoms', {
+    fetch(`http://localhost:8000/symptoms?user=${userEmail}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newSymptoms),

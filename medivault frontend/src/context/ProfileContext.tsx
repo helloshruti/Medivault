@@ -1,9 +1,11 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 
 export interface Profile {
   id: string;
   name: string;
   relation: string;
+  age?: number;
+  gender?: string;
 }
 
 interface ProfileContextType {
@@ -11,6 +13,7 @@ interface ProfileContextType {
   selectedProfileId: string;
   setSelectedProfileId: (id: string) => void;
   selectedProfile: Profile | undefined;
+  refreshProfiles: () => void;
 }
 
 const ProfileContext = createContext<ProfileContextType | null>(null);
@@ -21,19 +24,29 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     () => localStorage.getItem('mv_selected_profile') || ''
   );
 
-  useEffect(() => {
-    fetch('http://localhost:8000/family')
+  const refreshProfiles = useCallback(() => {
+    const storedUser = sessionStorage.getItem('medivault_user');
+    const email = storedUser ? encodeURIComponent(JSON.parse(storedUser).email || '') : '';
+    fetch(`http://localhost:8000/family?user=${email}`)
       .then(res => res.json())
       .then((data: Profile[]) => {
         setProfiles(data);
-        // Pick first profile if nothing is persisted yet
-        if (!localStorage.getItem('mv_selected_profile') && data.length > 0) {
+        const persisted = localStorage.getItem('mv_selected_profile');
+        // If the currently selected profile was deleted, fall back to first
+        if (persisted && !data.find(p => p.id === persisted) && data.length > 0) {
+          setSelectedProfileIdState(data[0].id);
+          localStorage.setItem('mv_selected_profile', data[0].id);
+        } else if (!persisted && data.length > 0) {
           setSelectedProfileIdState(data[0].id);
           localStorage.setItem('mv_selected_profile', data[0].id);
         }
       })
       .catch(err => console.error(err));
   }, []);
+
+  useEffect(() => {
+    refreshProfiles();
+  }, [refreshProfiles]);
 
   const setSelectedProfileId = (id: string) => {
     setSelectedProfileIdState(id);
@@ -43,7 +56,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const selectedProfile = profiles.find(p => p.id === selectedProfileId);
 
   return (
-    <ProfileContext.Provider value={{ profiles, selectedProfileId, setSelectedProfileId, selectedProfile }}>
+    <ProfileContext.Provider value={{ profiles, selectedProfileId, setSelectedProfileId, selectedProfile, refreshProfiles }}>
       {children}
     </ProfileContext.Provider>
   );

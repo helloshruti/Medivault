@@ -119,11 +119,11 @@ def classify_document(file_path: str) -> str:
     """Return the best-matching doc_type based on OCR keyword scoring."""
     text = _extract_text(file_path)
     if not text.strip():
-        return "lab"  # safe default when OCR yields nothing
+        return "unidentified"
 
     scores = {k: sum(1 for kw in kws if kw in text) for k, kws in _KEYWORDS.items()}
     best = max(scores, key=scores.get)
-    return best if scores[best] > 0 else "lab"
+    return best if scores[best] > 0 else "unidentified"
 
 
 _TIME_MAP = {
@@ -439,9 +439,20 @@ def compute_sha256(file_path: str) -> str:
     return sha256.hexdigest()
 
 
+def user_dir(user: Optional[str]) -> str:
+    """Return (and create) a per-user data directory."""
+    if not user:
+        return "."
+    safe = user.replace("@", "_at_").replace(".", "_")
+    path = os.path.join("user_data", safe)
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
 # ─── Document Metadata Storage ───────────────────────────────────────────────
 
-DOCS_FILE = "documents_data.json"
+def docs_file(user: Optional[str] = None) -> str:
+    return os.path.join(user_dir(user), "documents_data.json")
 
 class DocumentMeta(BaseModel):
     id: str
@@ -454,14 +465,15 @@ class DocumentMeta(BaseModel):
     size: int
     uploaded_at: str
 
-def load_documents() -> list:
-    if os.path.exists(DOCS_FILE):
-        with open(DOCS_FILE, "r") as f:
-            return json.load(f)
+def load_documents(user: Optional[str] = None) -> list:
+    f = docs_file(user)
+    if os.path.exists(f):
+        with open(f, "r") as fh:
+            return json.load(fh)
     return []
 
-def save_documents(docs: list):
-    with open(DOCS_FILE, "w") as f:
+def save_documents(docs: list, user: Optional[str] = None):
+    with open(docs_file(user), "w") as f:
         json.dump(docs, f, indent=2)
 
 
@@ -471,7 +483,8 @@ def save_documents(docs: list):
 async def upload_file(
     file: UploadFile = File(...),
     doc_type: str = Form("auto"),
-    profile: str = Form("self")
+    profile: str = Form("self"),
+    user: str = Form("")
 ):
     """
     Upload a medical document with full security:
@@ -552,9 +565,9 @@ async def upload_file(
         "uploaded_at": datetime.now().isoformat()
     }
 
-    docs = load_documents()
+    docs = load_documents(user=user)
     docs.insert(0, doc_meta)  # newest first
-    save_documents(docs)
+    save_documents(docs, user=user)
 
     # ── If this is a prescription, parse and auto-add medications ─────────────
     extracted_medications = []
@@ -563,12 +576,12 @@ async def upload_file(
         ocr_text = _ocr_text if _ocr_text else _extract_text(file_location)
         extracted_medications = parse_medications_from_text(ocr_text, profile)
         if extracted_medications:
-            all_meds = load_meds_raw()
+            all_meds = load_meds_raw(user=user)
             # Avoid duplicates: skip if same name+profile already exists
             existing_names = {m["name"].lower() for m in all_meds if m.get("profileId") == profile}
             new_meds = [m for m in extracted_medications if m["name"].lower() not in existing_names]
             if new_meds:
-                save_meds_raw(all_meds + new_meds)
+                save_meds_raw(all_meds + new_meds, user=user)
                 print(f"[PRESCRIPTION] Added {len(new_meds)} medication(s) for profile {profile}")
 
     return {
@@ -589,13 +602,13 @@ async def upload_file(
 # ─── Documents List Endpoint ─────────────────────────────────────────────────
 
 @app.get("/documents")
-def get_documents(profile: Optional[str] = None, doc_type: Optional[str] = None):
+def get_documents(profile: Optional[str] = None, doc_type: Optional[str] = None, user: Optional[str] = None):
     """
     Retrieve all stored document metadata.
     Optionally filter by profile or document type.
     Each document includes its Pinata gateway URL for retrieval.
     """
-    docs = load_documents()
+    docs = load_documents(user)
 
     if profile and profile != "all":
         docs = [d for d in docs if d["profile"] == profile]
@@ -609,9 +622,9 @@ def get_documents(profile: Optional[str] = None, doc_type: Optional[str] = None)
 # ─── Document Stats Endpoint (must be before {doc_id} routes) ────────────────
 
 @app.get("/documents/stats/summary")
-def get_document_stats(profile: Optional[str] = None):
+def get_document_stats(profile: Optional[str] = None, user: Optional[str] = None):
     """Get document count by type for category display."""
-    docs = load_documents()
+    docs = load_documents(user)
 
     if profile and profile != "all":
         docs = [d for d in docs if d["profile"] == profile]
@@ -623,13 +636,16 @@ def get_document_stats(profile: Optional[str] = None):
         "discharge": 0,
         "insurance": 0,
         "vaccination": 0,
+        "unidentified": 0,
         "total": len(docs)
     }
 
     for doc in docs:
-        dtype = doc.get("doc_type", "")
+        dtype = doc.get("doc_type", "unidentified")
         if dtype in stats:
             stats[dtype] += 1
+        else:
+            stats["unidentified"] += 1
 
     return stats
 
@@ -647,14 +663,14 @@ MIME_TYPES = {
 }
 
 @app.get("/documents/{doc_id}/view")
-def view_document(doc_id: str):
+def view_document(doc_id: str, user: Optional[str] = None):
     """
     Fetch an encrypted document from Pinata, decrypt it with AES-256,
     and return the original file to the user.
     This is the only way to view documents since they are stored encrypted.
     """
     # Find document metadata
-    docs = load_documents()
+    docs = load_documents(user)
     doc = None
     for d in docs:
         if d["id"] == doc_id:
@@ -703,21 +719,40 @@ def view_document(doc_id: str):
 # ─── Single Document & Delete (after /view to avoid route conflicts) ─────────
 
 @app.get("/documents/{doc_id}")
-def get_document(doc_id: str):
+def get_document(doc_id: str, user: Optional[str] = None):
     """Get a single document's metadata by ID."""
-    docs = load_documents()
+    docs = load_documents(user)
     for doc in docs:
         if doc["id"] == doc_id:
             return doc
     return {"error": "Document not found"}
 
 
+class DocTypeUpdate(BaseModel):
+    doc_type: str
+
+@app.patch("/documents/{doc_id}")
+def update_document_type(doc_id: str, body: DocTypeUpdate, user: Optional[str] = None):
+    """Manually update a document's type (used for unidentified docs)."""
+    docs = load_documents(user)
+    updated = False
+    for doc in docs:
+        if doc["id"] == doc_id:
+            doc["doc_type"] = body.doc_type
+            updated = True
+            break
+    if not updated:
+        return {"error": "Document not found"}
+    save_documents(docs, user)
+    return {"message": "Document type updated", "doc_type": body.doc_type}
+
+
 @app.delete("/documents/{doc_id}")
-def delete_document(doc_id: str):
+def delete_document(doc_id: str, user: Optional[str] = None):
     """Delete a document's metadata and its hash record."""
-    docs = load_documents()
+    docs = load_documents(user)
     docs = [d for d in docs if d["id"] != doc_id]
-    save_documents(docs)
+    save_documents(docs, user)
     # Also remove from the security hash database
     delete_hash_record(doc_id)
     return {"message": "Document and hash record removed"}
@@ -919,7 +954,8 @@ def verify_document_integrity(doc_id: str):
 
 # ─── Family Data ─────────────────────────────────────────────────────────────
 
-DATA_FILE = "family_data.json"
+def family_file(user: Optional[str] = None) -> str:
+    return os.path.join(user_dir(user), "family_data.json")
 
 class FamilyMember(BaseModel):
     id: str
@@ -934,9 +970,10 @@ class FamilyMember(BaseModel):
     symptoms: int
     documents: int
 
-def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
+def load_data(user: Optional[str] = None):
+    f = family_file(user)
+    if os.path.exists(f):
+        with open(f, "r") as f:
             return json.load(f)
     return [
       {
@@ -980,22 +1017,23 @@ def load_data():
       },
     ]
 
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
+def save_data(data, user: Optional[str] = None):
+    with open(family_file(user), "w") as f:
         json.dump([m.dict() for m in data], f, indent=2)
 
 @app.get("/family", response_model=List[FamilyMember])
-def get_family():
-    return load_data()
+def get_family(user: Optional[str] = None):
+    return load_data(user)
 
 @app.post("/family")
-def update_family(members: List[FamilyMember]):
-    save_data(members)
+def update_family(members: List[FamilyMember], user: Optional[str] = None):
+    save_data(members, user)
     return {"message": "Family data updated"}
 
 # ─── Medication Data Storage ─────────────────────────────────────────────────
 
-MEDS_FILE = "medications_data.json"
+def meds_file(user: Optional[str] = None) -> str:
+    return os.path.join(user_dir(user), "medications_data.json")
 
 class Medication(BaseModel):
     id: str
@@ -1007,9 +1045,10 @@ class Medication(BaseModel):
     takenToday: bool = False
     profileId: str = "1"
 
-def load_meds_raw() -> list:
-    if os.path.exists(MEDS_FILE):
-        with open(MEDS_FILE, "r") as f:
+def load_meds_raw(user: Optional[str] = None) -> list:
+    f = meds_file(user)
+    if os.path.exists(f):
+        with open(f, "r") as f:
             return json.load(f)
     return [
         {"id": "1", "name": "Lisinopril", "dosage": "10mg", "frequency": "once",
@@ -1018,32 +1057,33 @@ def load_meds_raw() -> list:
          "timeOfDay": "morning", "active": True, "takenToday": False, "profileId": "1"},
     ]
 
-def save_meds_raw(data: list):
-    with open(MEDS_FILE, "w") as f:
+def save_meds_raw(data: list, user: Optional[str] = None):
+    with open(meds_file(user), "w") as f:
         json.dump(data, f, indent=2)
 
 @app.get("/medications", response_model=List[Medication])
-def get_medications(profile: Optional[str] = None):
-    meds = load_meds_raw()
+def get_medications(profile: Optional[str] = None, user: Optional[str] = None):
+    meds = load_meds_raw(user)
     if profile:
         meds = [m for m in meds if m.get("profileId", "1") == profile]
     return meds
 
 @app.post("/medications")
-def update_medications(meds: List[Medication], profile: Optional[str] = None):
-    all_meds = load_meds_raw()
+def update_medications(meds: List[Medication], profile: Optional[str] = None, user: Optional[str] = None):
+    all_meds = load_meds_raw(user)
     if profile:
         # Keep other profiles' meds, replace current profile's meds
         kept = [m for m in all_meds if m.get("profileId", "1") != profile]
         incoming = [{**m.dict(), "profileId": profile} for m in meds]
-        save_meds_raw(kept + incoming)
+        save_meds_raw(kept + incoming, user)
     else:
-        save_meds_raw([m.dict() for m in meds])
+        save_meds_raw([m.dict() for m in meds], user)
     return {"message": "Medications updated"}
 
 # ─── Symptom Data Storage ────────────────────────────────────────────────────
 
-SYMPTOMS_FILE = "symptoms_data.json"
+def symptoms_file(user: Optional[str] = None) -> str:
+    return os.path.join(user_dir(user), "symptoms_data.json")
 
 class Symptom(BaseModel):
     id: str
@@ -1055,24 +1095,103 @@ class Symptom(BaseModel):
     notes: str
     date: str
 
-def load_symptoms():
-    if os.path.exists(SYMPTOMS_FILE):
-        with open(SYMPTOMS_FILE, "r") as f:
+def load_symptoms(user: Optional[str] = None):
+    f = symptoms_file(user)
+    if os.path.exists(f):
+        with open(f, "r") as f:
             return json.load(f)
     return []
 
-def save_symptoms(data):
-    with open(SYMPTOMS_FILE, "w") as f:
+def save_symptoms(data, user: Optional[str] = None):
+    with open(symptoms_file(user), "w") as f:
         json.dump([s.dict() for s in data], f, indent=2)
 
 @app.get("/symptoms", response_model=List[Symptom])
-def get_symptoms():
-    return load_symptoms()
+def get_symptoms(user: Optional[str] = None):
+    return load_symptoms(user)
 
 @app.post("/symptoms")
-def update_symptoms(symptoms: List[Symptom]):
-    save_symptoms(symptoms)
+def update_symptoms(symptoms: List[Symptom], user: Optional[str] = None):
+    save_symptoms(symptoms, user)
     return {"message": "Symptoms updated"}
+
+# ─── Vitals → Dataset Append ─────────────────────────────────────────────────
+
+DATASET_PATH = os.path.join(os.path.dirname(__file__), "..", "medivault models", "DB PRED", "dataset1.csv")
+
+class VitalsRecord(BaseModel):
+    bp: str = "120/80"
+    highChol: str = "No"
+    bmi: str = "22"
+    smoker: str = "No"
+    physActivity: str = "Yes"
+    fruits: str = "Yes"
+    veggies: str = "Yes"
+    hvyAlcohol: str = "No"
+    age: Optional[int] = None
+    gender: Optional[str] = None
+
+def _yn(val: str) -> int:
+    return 1 if str(val).strip().lower() == "yes" else 0
+
+def _age_category(age: Optional[int]) -> int:
+    if not age: return 0
+    if age <= 24: return 1
+    if age <= 29: return 2
+    if age <= 34: return 3
+    if age <= 39: return 4
+    if age <= 44: return 5
+    if age <= 49: return 6
+    if age <= 54: return 7
+    if age <= 59: return 8
+    if age <= 64: return 9
+    if age <= 69: return 10
+    if age <= 74: return 11
+    if age <= 79: return 12
+    return 13
+
+@app.post("/vitals/record")
+def record_vitals(v: VitalsRecord):
+    """Map user vitals to dataset columns and append a row to dataset1.csv."""
+    try:
+        bp_sys = int(v.bp.split("/")[0])
+    except Exception:
+        bp_sys = 120
+    high_bp = 1 if bp_sys >= 130 else 0
+
+    try:
+        bmi_val = float(v.bmi)
+    except Exception:
+        bmi_val = 22.0
+
+    sex = 1 if str(v.gender or "").strip().lower() in ("male", "m") else 0
+    age_cat = _age_category(v.age)
+
+    row = [
+        0,                   # Diabetes_012 — unknown at input time
+        high_bp,             # HighBP
+        _yn(v.highChol),     # HighChol
+        round(bmi_val, 1),   # BMI
+        _yn(v.smoker),       # Smoker
+        _yn(v.physActivity), # PhysActivity
+        _yn(v.fruits),       # Fruits
+        _yn(v.veggies),      # Veggies
+        _yn(v.hvyAlcohol),   # HvyAlcoholConsump
+        sex,                 # Sex
+        age_cat,             # Age
+    ]
+
+    dataset_path = os.path.normpath(DATASET_PATH)
+    if not os.path.exists(dataset_path):
+        return {"error": f"Dataset not found at {dataset_path}"}
+
+    with open(dataset_path, "a", newline="") as f:
+        import csv
+        writer = csv.writer(f)
+        writer.writerow(row)
+
+    return {"message": "Vitals appended to dataset", "row": row}
+
 
 @app.get("/")
 def read_root():
