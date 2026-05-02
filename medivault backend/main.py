@@ -17,7 +17,7 @@ import base64
 
 # ─── OCR / Document Classification ──────────────────────────────────────────
 
-_TESS_CMD = "/opt/homebrew/bin/tesseract"  # Homebrew path on Apple Silicon / Intel Mac
+_TESS_CMD = shutil.which("tesseract") or "/opt/homebrew/bin/tesseract"
 
 
 def _run_tesseract(img) -> str:
@@ -240,6 +240,8 @@ origins = [
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:3000",
+    "https://medivault-beta.vercel.app",
+    "https://medivault.vercel.app",
 ]
 
 app.add_middleware(
@@ -1198,10 +1200,7 @@ def read_root():
     return {"message": "Medivault Backend is running"}
 
 
-# ─── Medical Chatbot (Ollama) ─────────────────────────────────────────────────
-
-OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "llama3.2"
+# ─── Medical Chatbot (Groq) ───────────────────────────────────────────────────
 
 SYSTEM_PROMPT = (
     "You are MediVault AI, a helpful medical assistant. "
@@ -1215,19 +1214,18 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 def chat(req: ChatRequest):
-    prompt = f"{SYSTEM_PROMPT}\n\nUser: {req.message}\nAssistant:"
     try:
-        response = requests.post(
-            OLLAMA_URL,
-            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
-            timeout=60,
+        from groq import Groq
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        completion = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": req.message},
+            ],
+            max_tokens=200,
         )
-        if response.status_code == 200:
-            reply = response.json().get("response", "").strip()
-            return {"reply": reply}
-        else:
-            return {"reply": "Ollama returned an error. Make sure it is running: `ollama serve`"}
-    except requests.exceptions.ConnectionError:
-        return {"reply": "Could not connect to Ollama. Run `ollama serve` in a terminal, then try again."}
+        reply = completion.choices[0].message.content.strip()
+        return {"reply": reply}
     except Exception as e:
         return {"reply": f"Something went wrong: {str(e)}"}
