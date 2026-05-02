@@ -31,11 +31,8 @@ export default function App() {
     );
   }
 
-  const displayName = user.name.split(' ').filter((part) => !/^\d+$/.test(part)).join(' ');
-
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      <div className="p-4 text-xl font-semibold">Hello {displayName}</div>
       {renderPage()}
       <MobileNav currentPage={currentPage} onNavigate={setCurrentPage} />
     </div>
