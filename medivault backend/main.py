@@ -972,52 +972,39 @@ class FamilyMember(BaseModel):
     symptoms: int
     documents: int
 
+REGISTERED_USERS_CSV = "user_data/registered_users.csv"
+
+def register_user(email: str):
+    """Track first-time users in a CSV. Creates the file if it doesn't exist."""
+    os.makedirs("user_data", exist_ok=True)
+    existing = set()
+    if os.path.exists(REGISTERED_USERS_CSV):
+        with open(REGISTERED_USERS_CSV, "r") as f:
+            for line in f:
+                parts = line.strip().split(",")
+                if parts:
+                    existing.add(parts[0])
+    if email not in existing:
+        with open(REGISTERED_USERS_CSV, "a") as f:
+            from datetime import datetime
+            f.write(f"{email},{datetime.utcnow().isoformat()}\n")
+
+def is_registered_user(email: str) -> bool:
+    if not os.path.exists(REGISTERED_USERS_CSV):
+        return False
+    with open(REGISTERED_USERS_CSV, "r") as f:
+        for line in f:
+            parts = line.strip().split(",")
+            if parts and parts[0] == email:
+                return True
+    return False
+
 def load_data(user: Optional[str] = None):
     f = family_file(user)
     if os.path.exists(f):
         with open(f, "r") as f:
             return json.load(f)
-    return [
-      {
-        "id": "1",
-        "name": "Tanishka",
-        "relation": "You",
-        "age": 25,
-        "gender": "Female",
-        "color": "blue",
-        "initials": "T",
-        "active": True,
-        "medications": 3,
-        "symptoms": 3,
-        "documents": 5,
-      },
-      {
-        "id": "2",
-        "name": "Shruti",
-        "relation": "Sister",
-        "age": 22,
-        "gender": "Female",
-        "color": "purple",
-        "initials": "S",
-        "active": False,
-        "medications": 2,
-        "symptoms": 1,
-        "documents": 3,
-      },
-      {
-        "id": "3",
-        "name": "Trisha",
-        "relation": "Mother",
-        "age": 52,
-        "gender": "Female",
-        "color": "pink",
-        "initials": "Tr",
-        "active": False,
-        "medications": 5,
-        "symptoms": 2,
-        "documents": 8,
-      },
-    ]
+    return []
 
 def save_data(data, user: Optional[str] = None):
     with open(family_file(user), "w") as f:
@@ -1025,6 +1012,8 @@ def save_data(data, user: Optional[str] = None):
 
 @app.get("/family", response_model=List[FamilyMember])
 def get_family(user: Optional[str] = None):
+    if user:
+        register_user(user)
     return load_data(user)
 
 @app.post("/family")

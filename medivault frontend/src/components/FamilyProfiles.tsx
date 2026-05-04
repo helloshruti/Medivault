@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, UserPlus } from 'lucide-react';
 import { useProfile } from '../context/ProfileContext';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
@@ -30,47 +30,6 @@ interface FamilyMember {
   documents: number;
 }
 
-const INITIAL_MEMBERS: FamilyMember[] = [
-  {
-    id: '1',
-    name: 'Tanishka',
-    relation: 'You',
-    age: 25,
-    gender: 'Female',
-    color: 'blue',
-    initials: 'T',
-    active: true,
-    medications: 3,
-    symptoms: 3,
-    documents: 5,
-  },
-  {
-    id: '2',
-    name: 'Shruti',
-    relation: 'Sister',
-    age: 22,
-    gender: 'Female',
-    color: 'purple',
-    initials: 'S',
-    active: false,
-    medications: 2,
-    symptoms: 1,
-    documents: 3,
-  },
-  {
-    id: '3',
-    name: 'Trisha',
-    relation: 'Mother',
-    age: 52,
-    gender: 'Female',
-    color: 'pink',
-    initials: 'Tr',
-    active: false,
-    medications: 5,
-    symptoms: 2,
-    documents: 8,
-  },
-];
 
 export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
   const { selectedProfileId, setSelectedProfileId, refreshProfiles } = useProfile();
@@ -219,20 +178,39 @@ export function FamilyProfiles({ onNavigate }: FamilyProfilesProps) {
             </Button>
           </div>
 
-          {/* Quick Selector */}
-          <Select value={selectedProfileId} onValueChange={handleSwitchProfile}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Switch profile" />
-            </SelectTrigger>
-            <SelectContent>
-              {members.map(m => (
-                <SelectItem key={m.id} value={m.id}>{m.name} ({m.relation})</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Quick Selector — only shown when profiles exist */}
+          {members.length > 0 && (
+            <Select value={selectedProfileId} onValueChange={handleSwitchProfile}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Switch profile" />
+              </SelectTrigger>
+              <SelectContent>
+                {members.map(m => (
+                  <SelectItem key={m.id} value={m.id}>{m.name} ({m.relation})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <div className="p-4 space-y-4">
+          {/* Empty state for new users */}
+          {members.length === 0 && (
+            <Card className="p-8 flex flex-col items-center text-center gap-4 border-dashed border-2 border-gray-300 bg-white">
+              <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
+                <UserPlus className="w-8 h-8 text-blue-500" />
+              </div>
+              <div>
+                <div className="font-semibold text-gray-800 mb-1">No profiles yet</div>
+                <div className="text-sm text-gray-500">Add your first profile to start tracking health records for you or your family.</div>
+              </div>
+              <Button onClick={handleOpenAdd} className="mt-2">
+                <Plus className="w-4 h-4 mr-1" />
+                Add a User
+              </Button>
+            </Card>
+          )}
+
           {/* Family Member Cards */}
           {members.map((member) => (
             <Card key={member.id} className="p-4">
