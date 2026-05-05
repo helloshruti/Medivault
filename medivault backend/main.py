@@ -147,71 +147,122 @@ _FREQ_MAP = {
 def parse_medications_from_text(text: str, profile_id: str) -> list:
     """
     Extract medication entries from prescription OCR text.
-    Handles numbered lines like:
+    Handles numbered lines:
       1. Paracetol-500 — 1 tablet after breakfast (9:00 AM)
-      2. Coughnil Syrup — 10 ml after dinner (8:00 PM)
+    And plain un-numbered lines:
+      Paracetamol 500 mg - 8:00 AM, 2:00 PM, 8:00 PM (after meals)
+      Cetirizine 10 mg - 10:00 PM (before sleep)
     """
     import re
     medications = []
-    text_lower = text.lower()
     lines = text.split("\n")
 
-    for line in lines:
-        line = line.strip()
-        # Only process numbered medication lines
-        m = re.match(r"^\d+[.)]\s+(.+)", line)
-        if not m:
-            continue
+    # Regex to detect lines that look like medication entries (have a dosage unit or known med keyword)
+    _MED_LINE_RE = re.compile(
+        r".+(?:mg|mcg|g\b|ml|tablet|tab|capsule|cap|syrup|drop|puff|unit|vitamin|cream|ointment|spray)",
+        re.IGNORECASE
+    )
+    # Time patterns that indicate a schedule is present on the line
+    _TIME_RE = re.compile(r"\d{1,2}:\d{2}\s*(?:am|pm)", re.IGNORECASE)
 
-        content = m.group(1).strip()
+    def _parse_content(content: str) -> dict | None:
         content_lower = content.lower()
 
-        # Split on em-dash, regular dash used as separator, or colon
+        # Split on em-dash, en-dash, or regular dash used as separator
         parts = re.split(r"\s*[—–\-]\s*", content, maxsplit=1)
         name = parts[0].strip()
         rest = parts[1].strip() if len(parts) > 1 else content
 
-        # Clean up: remove leading numbers that bled into the name
-        name = re.sub(r"^\d+\.\s*", "", name).strip()
+        # Remove leading numbering that may have bled into name
+        name = re.sub(r"^\d+[.)]\s*", "", name).strip()
         if not name or len(name) < 2:
-            continue
+            return None
 
-        # Dosage: first numeric+unit pattern in rest (or full content)
+        # Dosage: first numeric+unit pattern anywhere in the line
         dosage_match = re.search(
-            r"(\d+(?:\.\d+)?\s*(?:mg|mcg|g|ml|tablet|tab|capsule|cap|drop|puff|unit)s?)",
-            rest, re.IGNORECASE
+            r"(\d+(?:\.\d+)?\s*(?:mg|mcg|g\b|ml|tablet|tab|capsule|cap|drop|puff|unit)s?)",
+            content, re.IGNORECASE
         )
         dosage = dosage_match.group(1).strip() if dosage_match else "As prescribed"
 
-        # Time of day
+        # If dosage was embedded in the name part (e.g. "Paracetamol 500 mg"), keep full name
+        # but strip trailing dosage-only suffix to get clean med name
+        name_clean = re.sub(
+            r"\s+\d+(?:\.\d+)?\s*(?:mg|mcg|g\b|ml|tablet|tab|capsule|cap|drop|puff|unit)s?$",
+            "", name, flags=re.IGNORECASE
+        ).strip()
+        if name_clean:
+            name = name_clean
+
+        # Frequency: explicit keyword first, then count distinct time mentions on the line
+        frequency = "once"
+        for keyword, freq in _FREQ_MAP.items():
+            if keyword in content_lower:
+                frequency = freq
+                break
+        else:
+            # Count how many clock times appear (e.g. "8:00 AM, 2:00 PM, 8:00 PM" → 3)
+            time_count = len(_TIME_RE.findall(content))
+            if time_count >= 3:
+                frequency = "three"
+            elif time_count == 2:
+                frequency = "twice"
+
+        # Time of day: use first matching keyword; prefer earliest slot when multiple present
         time_of_day = "morning"
         for keyword, slot in _TIME_MAP.items():
             if keyword in content_lower:
                 time_of_day = slot
                 break
 
-        # Frequency
-        frequency = "once"
-        for keyword, freq in _FREQ_MAP.items():
-            if keyword in content_lower:
-                frequency = freq
-                break
-
-        med_id = hashlib.md5(
-            f"{name}{profile_id}{datetime.now().isoformat()}".encode()
-        ).hexdigest()[:9]
-
-        medications.append({
-            "id": med_id,
+        return {
             "name": name,
             "dosage": dosage,
             "frequency": frequency,
             "timeOfDay": time_of_day,
+        }
+
+    seen_names: set[str] = set()
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # Numbered line (e.g. "1. Paracetamol ...") — always attempt to parse
+        numbered = re.match(r"^\d+[.)]\s+(.+)", line)
+        if numbered:
+            content = numbered.group(1).strip()
+        elif _MED_LINE_RE.search(line):
+            # Un-numbered line that contains a dosage unit — treat whole line as content
+            content = line
+        else:
+            continue
+
+        result = _parse_content(content)
+        if not result:
+            continue
+
+        name_key = result["name"].lower()
+        if name_key in seen_names:
+            continue
+        seen_names.add(name_key)
+
+        med_id = hashlib.md5(
+            f"{result['name']}{profile_id}{datetime.now().isoformat()}".encode()
+        ).hexdigest()[:9]
+
+        medications.append({
+            "id": med_id,
+            "name": result["name"],
+            "dosage": result["dosage"],
+            "frequency": result["frequency"],
+            "timeOfDay": result["timeOfDay"],
             "active": True,
             "takenToday": False,
             "profileId": profile_id,
         })
-        print(f"[PRESCRIPTION] Parsed: {name} | {dosage} | {time_of_day}")
+        print(f"[PRESCRIPTION] Parsed: {result['name']} | {result['dosage']} | {result['timeOfDay']}")
 
     return medications
 
